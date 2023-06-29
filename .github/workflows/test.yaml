@@ -2,6 +2,10 @@ name: "Test"
 
 on:
   pull_request:
+    events:
+      - syncronize
+      - labeled
+      - unlabeled
     branches:
       - main
 
@@ -12,8 +16,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-      - name: Hello world action step
+      - name: Run the local action
         uses: ./
         with:
           labels: >-
-            test, run, bugfix
+            bugfix, breaking-change, new-feature
