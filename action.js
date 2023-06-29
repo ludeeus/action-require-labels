@@ -26,8 +26,8 @@ function runAction() {
     const requiredLabels = new Set(inputLabels.split(",").map(label => label.trim()))
     const prLabels = eventData.pull_request.labels.map(label => label.name)
 
-    console.log(`Required labels ${requiredLabels}`)
-    console.log(`Pull request labels ${prLabels}`)
+    console.log(`Required labels (${Array.from(requiredLabels).join(",")})`)
+    console.log(`Pull request labels (${prLabels.join(",")})`)
 
     const matchingLabels = prLabels.filter(label => requiredLabels.has(label))
     console.log(`Found ${matchingLabels.length} matching label(s) on the pull request (${matchingLabels.join(",")})`)
