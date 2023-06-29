@@ -2,6 +2,10 @@ name: "Test"
 
 on:
   pull_request:
+    events:
+      - syncronize
+      - labeled
+      - unlabeled
     branches:
       - main
 

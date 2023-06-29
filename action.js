@@ -10,9 +10,6 @@ function runAction() {
         throw new Error(`GITHUB_EVENT_PATH ${eventPath} does not exist`)
     }
 
-    console.log(Object.keys(process.env))
-      
-
     if (!eventData.pull_request) {
         throw new Error("This is not a pull request.")
     }
@@ -21,12 +18,25 @@ function runAction() {
         throw new Error("No labels defined on the pull request.")
     }
 
+    const inputLabels = process.env.INPUT_LABELS
+    
+    if (!inputLabels) {
+        throw new Error("No required labels defined for the action.")
+    }
+
+    const requiredLabels = new Set(inputLabels.split(",").map(label => label.trim()))
     const prLabels = eventData.pull_request.labels.map(label => label.name)
-    console.log(prLabels)
+
+    console.log(`Required labels ${requiredLabels}`)
+    console.log(`Pull request labels ${prLabels}`)
+
+    const matchingLabels = prLabels.filter(label => requiredLabels.has(label))
+    console.log(`Found ${matchingLabels.length} matching label(s) on the pull request`)
+    
+    if (matchingLabels.length === 0) {
+        throw new Error("No matching required labels found.");
+    }
 }
-
-
-
 
 
 runAction();
