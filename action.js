@@ -30,7 +30,7 @@ function runAction() {
     console.log(`Pull request labels ${prLabels}`)
 
     const matchingLabels = prLabels.filter(label => requiredLabels.has(label))
-    console.log(`Found ${matchingLabels.length} matching label(s) on the pull request`)
+    console.log(`Found ${matchingLabels.length} matching label(s) on the pull request (${matchingLabels.join(",")})`)
     
     if (matchingLabels.length === 0) {
         throw new Error("No matching required labels found.");
