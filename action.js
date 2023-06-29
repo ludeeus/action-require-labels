@@ -1,14 +1,13 @@
 const fs = require("fs");
 
 function runAction() {
-    let eventData;
     const eventPath = process.env.GITHUB_EVENT_PATH
 
-    if (eventPath && fs.existsSync(eventPath)) {
-        eventData = JSON.parse(fs.readFileSync(eventPath, {encoding: 'utf8'}))
-    } else {
+    if (!eventPath || !fs.existsSync(eventPath)) {
         throw new Error(`GITHUB_EVENT_PATH ${eventPath} does not exist`)
     }
+
+    const eventData = JSON.parse(fs.readFileSync(eventPath, {encoding: 'utf8'}))
 
     if (!eventData.pull_request) {
         throw new Error("This is not a pull request.")
