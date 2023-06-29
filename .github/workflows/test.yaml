@@ -20,4 +20,4 @@ jobs:
         uses: ./
         with:
           labels: >-
-            test, run, bugfix
+            bugfix, breaking-change, new-feature
