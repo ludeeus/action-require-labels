@@ -1,8 +1,8 @@
 const fs = require("fs");
 
 function runAction() {
-    console.log(process.env.GITHUB_EVENT_PATH)
-    const eventData = fs.readFileSync('student.json')
+    const eventData = fs.readFileSync(process.env.GITHUB_EVENT_PATH)
+    console.log(eventData.pull_request)
 }
 
 
