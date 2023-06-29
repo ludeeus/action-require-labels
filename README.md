@@ -16,7 +16,7 @@ name: "Check Pull Request labels"
 on:
   pull_request:
     types:
-      - syncronize
+      - synchronize
       - labeled
       - unlabeled
     branches:
