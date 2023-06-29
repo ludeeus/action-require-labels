@@ -15,7 +15,7 @@ name: "Check Pull Request labels"
 
 on:
   pull_request:
-    events:
+    types:
       - syncronize
       - labeled
       - unlabeled
