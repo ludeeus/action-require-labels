@@ -2,12 +2,14 @@ name: "Test"
 
 on:
   pull_request:
-    events:
-      - syncronize
+    types:
       - labeled
+      - synchronize
       - unlabeled
     branches:
       - main
+
+permissions: {}
 
 jobs:
   run_the_action:
@@ -16,6 +18,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+
       - name: Run the local action
         uses: ./
         with:

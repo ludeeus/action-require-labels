@@ -1,0 +1,17 @@
+changelog:
+  categories:
+    - title: '💥 Breaking changes'
+      labels:
+        - 'breaking-change'
+
+    - title: '✨ New features'
+      labels:
+        - 'new-feature'
+
+    - title: '♻️ Refactor'
+      labels:
+        - 'refactor'
+
+    - title: '🐛 Bug Fixes'
+      labels:
+        - 'bugfix'
