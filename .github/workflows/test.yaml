@@ -1,0 +1,19 @@
+name: "Test"
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  run_the_action:
+    name: "Run the action"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Hello world action step
+        uses: ./
+        with:
+          labels: >-
+            test, run, bugfix

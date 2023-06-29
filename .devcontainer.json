@@ -1,0 +1,4 @@
+{
+	"name": "ludeeus/action-require-labels",
+	"image": "mcr.microsoft.com/devcontainers/base:bookworm"
+}

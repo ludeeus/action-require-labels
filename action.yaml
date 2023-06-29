@@ -1,0 +1,9 @@
+name: 'action-require-labels'
+description: 'Require spesific labels on PRs'
+inputs:
+  labels:
+    description: 'Comma seperated string of labels to look for.'
+    required: true
+runs:
+  using: 'node16'
+  main: 'action.js'
