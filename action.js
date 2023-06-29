@@ -10,9 +10,7 @@ function runAction() {
         throw new Error(`GITHUB_EVENT_PATH ${eventPath} does not exist`)
     }
 
-    for (const key in process.env.keys()) {
-        console.log(key)
-    }
+    console.log(Object.keys(process.env))
       
 
     if (!eventData.pull_request) {
