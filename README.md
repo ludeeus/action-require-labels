@@ -35,6 +35,6 @@ jobs:
       - name: Check the labels
         uses: ludeeus/action-require-labels@1.0.0
         with:
-        labels: >-
-            bugfix, breaking-change, new-feature
+          labels: >-
+              bugfix, breaking-change, new-feature
 ```
