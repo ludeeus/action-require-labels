@@ -23,4 +23,4 @@ jobs:
         uses: ./
         with:
           labels: >-
-            bugfix, breaking-change, new-feature
+            bugfix, breaking-change, new-feature, dependencies
