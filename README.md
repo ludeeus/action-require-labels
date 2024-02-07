@@ -31,7 +31,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check the labels
-        uses: ludeeus/action-require-labels@1.0.0
+        uses: ludeeus/action-require-labels@1.1.0
         with:
           labels: >-
               bugfix, breaking-change, new-feature
