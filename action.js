@@ -40,7 +40,7 @@ function runAction() {
 try {
     runAction();
 } catch (err) {
-    console.log("::error::", err.mesasge)
+    console.log("::error::", err.message || err.toString())
     process.exitCode = 1
 }
 
