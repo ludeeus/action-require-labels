@@ -5,5 +5,5 @@ inputs:
     description: 'Comma seperated string of labels to look for.'
     required: true
 runs:
-  using: 'node16'
+  using: 'node20'
   main: 'action.js'
