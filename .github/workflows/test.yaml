@@ -2,12 +2,13 @@ name: "Test"
 
 on:
   pull_request:
-    types:
-      - labeled
-      - synchronize
-      - unlabeled
     branches:
       - main
+    types:
+      - labeled
+      - opened
+      - synchronize
+      - unlabeled
 
 permissions: {}
 
