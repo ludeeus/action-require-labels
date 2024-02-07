@@ -15,12 +15,13 @@ name: "Check Pull Request labels"
 
 on:
   pull_request:
-    types:
-      - synchronize
-      - labeled
-      - unlabeled
     branches:
       - main
+    types:
+      - labeled
+      - opened
+      - synchronize
+      - unlabeled
 
 permissions: {}
 
@@ -29,9 +30,6 @@ jobs:
     name: "Check Pull Request labels"
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-
       - name: Check the labels
         uses: ludeeus/action-require-labels@1.0.0
         with:
