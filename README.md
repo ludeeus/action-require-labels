@@ -1,12 +1,12 @@
 # action-require-labels
 
-This action privides a simple solution to require spesific labels on pull requests. Without the need to use the GitHub API and tokens.
+This action provides a simple solution to require specific labels on pull requests. Without the need to use the GitHub API and tokens.
 
 ## Inputs
 
 ### `labels`
 
-**Required** Comma seperated string of labels to look for.
+**Required** Comma separated string of labels to look for.
 
 The check passes when the pull request has **at least one** of the listed labels (OR matching), not all of them. For example, with `bugfix, breaking-change, new-feature`, a pull request labeled with any single one of those passes. It fails only when none of the listed labels are present.
 
