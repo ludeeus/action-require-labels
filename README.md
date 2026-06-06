@@ -38,3 +38,45 @@ jobs:
           labels: >-
               bugfix, breaking-change, new-feature
 ```
+
+<details>
+<summary>Requiring one of multiple sets of labels</summary>
+
+Because each invocation requires **at least one** of its labels (OR matching), you can add the action multiple times to require one label from *each* set. Every step must pass for the job to succeed, so this effectively combines the sets with AND.
+
+The example below requires the pull request to have at least one **type** label (`bugfix`, `breaking-change` or `new-feature`) **and** at least one **size** label (`small`, `medium` or `large`).
+
+```yaml
+name: "Check Pull Request labels"
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - labeled
+      - opened
+      - synchronize
+      - unlabeled
+
+permissions: {}
+
+jobs:
+  check_labels:
+    name: "Check Pull Request labels"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check the type label
+        uses: ludeeus/action-require-labels@2.0.0
+        with:
+          labels: >-
+              bugfix, breaking-change, new-feature
+
+      - name: Check the size label
+        uses: ludeeus/action-require-labels@2.0.0
+        with:
+          labels: >-
+              small, medium, large
+```
+
+</details>
