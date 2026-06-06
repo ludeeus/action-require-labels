@@ -6,7 +6,7 @@ const { runAction } = require("./action.js");
 
 // Stubs the filesystem and environment that runAction reads. Nothing here
 // touches the real filesystem (fs is mocked) and the env values are
-// test-controlled, restored after every test.
+// test-controlled and cleared after every test.
 function stubEvent(opts = {}) {
     // Use `in` checks (not default params) so callers can pass `undefined`
     // explicitly to assert the "env var not set" branches.
