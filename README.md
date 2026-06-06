@@ -47,6 +47,7 @@ Because each invocation requires **at least one** of its labels (OR matching), y
 The example below requires the pull request to have at least one **type** label (`bugfix`, `breaking-change` or `new-feature`) **and** at least one **size** label (`small`, `medium` or `large`).
 
 ```yaml
+    ...
     steps:
       - name: Check the type label
         uses: ludeeus/action-require-labels@2.0.0
