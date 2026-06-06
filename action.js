@@ -1,11 +1,13 @@
 const fs = require("fs");
 
-function runAction({ eventPath, inputLabels, existsSync, readFileSync }) {
-    if (!eventPath || !existsSync(eventPath)) {
+function runAction() {
+    const eventPath = process.env.GITHUB_EVENT_PATH
+
+    if (!eventPath || !fs.existsSync(eventPath)) {
         throw new Error(`GITHUB_EVENT_PATH ${eventPath} does not exist`)
     }
 
-    const eventData = JSON.parse(readFileSync(eventPath, { encoding: 'utf8' }))
+    const eventData = JSON.parse(fs.readFileSync(eventPath, { encoding: 'utf8' }))
 
     if (!eventData.pull_request) {
         throw new Error("This is not a pull request.")
@@ -14,6 +16,8 @@ function runAction({ eventPath, inputLabels, existsSync, readFileSync }) {
     if (!eventData.pull_request.labels || eventData.pull_request.labels.length === 0) {
         throw new Error("No labels defined on the pull request.")
     }
+
+    const inputLabels = process.env.INPUT_LABELS
 
     if (!inputLabels) {
         throw new Error("No required labels defined for the action.")
@@ -35,12 +39,7 @@ function runAction({ eventPath, inputLabels, existsSync, readFileSync }) {
 
 if (require.main === module) {
     try {
-        runAction({
-            eventPath: process.env.GITHUB_EVENT_PATH,
-            inputLabels: process.env.INPUT_LABELS,
-            existsSync: fs.existsSync,
-            readFileSync: fs.readFileSync,
-        });
+        runAction();
     } catch (err) {
         console.log("::error::", err.message || err.toString())
         process.exitCode = 1
