@@ -1,0 +1,11 @@
+{
+  "name": "action-require-labels",
+  "version": "2.0.0",
+  "description": "Require spesific labels on PRs",
+  "private": true,
+  "main": "action.js",
+  "scripts": {
+    "test": "node --test"
+  },
+  "license": "MIT"
+}
