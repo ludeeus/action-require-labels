@@ -37,10 +37,13 @@ function runAction() {
     }
 }
 
-try {
-    runAction();
-} catch (err) {
-    console.log("::error::", err.message || err.toString())
-    process.exitCode = 1
+if (require.main === module) {
+    try {
+        runAction();
+    } catch (err) {
+        console.log("::error::", err.message || err.toString())
+        process.exitCode = 1
+    }
 }
 
+module.exports = { runAction };
