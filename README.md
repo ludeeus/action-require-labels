@@ -65,7 +65,7 @@ permissions: {}
 jobs:
   check_labels:
     name: "Check Pull Request labels"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     steps:
       - name: Check the labels
         uses: ludeeus/action-require-labels@2.0.0

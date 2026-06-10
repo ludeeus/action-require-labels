@@ -1,6 +1,5 @@
 const fs = require("node:fs")
 
-// Messages must stay single-line; they are emitted directly as ::error:: annotations.
 class ActionError extends Error {}
 
 function runAction() {
@@ -45,12 +44,18 @@ function runAction() {
     }
 }
 
+// Workflow command data must stay on a single line; see
+// https://docs.github.com/actions/reference/workflow-commands-for-github-actions
+function escapeData(data) {
+    return data.replace(/%/g, "%25").replace(/\r/g, "%0D").replace(/\n/g, "%0A")
+}
+
 if (require.main === module) {
     try {
         runAction()
     } catch (err) {
         if (err instanceof ActionError) {
-            console.log(`::error::${err.message}`)
+            console.log(`::error::${escapeData(err.message)}`)
         } else {
             console.log(err)
             console.log("::error::Unknown error")
