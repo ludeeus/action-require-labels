@@ -24,7 +24,7 @@ jobs:
         uses: ./
         with:
           labels: >-
-            bugfix, breaking-change, new-feature, dependencies, ci, documentation, internal
+            bugfix, breaking-change, new-feature, dependencies, ci, documentation, internal, refactor
 
   run_the_action_inverted:
     name: "Run the action (inverted)"
