@@ -19,11 +19,14 @@ function runAction() {
 
     const inputLabels = process.env.INPUT_LABELS
 
-    if (!inputLabels) {
+    const requiredLabels = new Set(
+        (inputLabels || "").split(/[,\n]/).map(label => label.trim()).filter(Boolean)
+    )
+
+    if (requiredLabels.size === 0) {
         throw new Error("No required labels defined for the action.")
     }
 
-    const requiredLabels = new Set(inputLabels.split(",").map(label => label.trim()))
     const prLabels = eventData.pull_request.labels.map(label => label.name)
 
     console.log(`Required labels (${Array.from(requiredLabels).join(",")})`)

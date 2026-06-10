@@ -27,11 +27,27 @@ The action reads the pull request labels from the event payload and succeeds whe
 
 ### `labels`
 
-**Required** Comma separated string of labels to look for.
+**Required** Labels to look for, separated by commas or newlines.
 
 The check passes when the pull request has **at least one** of the listed labels (OR matching), not all of them. For example, with `bugfix, breaking-change, new-feature`, a pull request labeled with any single one of those passes. It fails only when none of the listed labels are present.
 
-Labels are matched against the pull request labels exactly, including casing. Whitespace around each comma-separated entry is ignored.
+Labels are matched against the pull request labels exactly, including casing. Whitespace around each entry is ignored, as are blank lines.
+
+Both of these are equivalent:
+
+```yaml
+with:
+  labels: >-
+      bugfix, breaking-change, new-feature
+```
+
+```yaml
+with:
+  labels: |
+    bugfix
+    breaking-change
+    new-feature
+```
 
 ## Behavior
 
