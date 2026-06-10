@@ -67,6 +67,19 @@ test("throws when no required labels are defined for the action", () => {
     assert.throws(() => runAction(), /No required labels defined for the action\./);
 });
 
+test("throws when the required labels input contains only whitespace and commas", () => {
+    stubEvent({ inputLabels: " , , " });
+    assert.throws(() => runAction(), /No required labels defined for the action\./);
+});
+
+test("ignores empty entries in the required labels input", () => {
+    stubEvent({
+        event: { pull_request: { labels: [{ name: "new-feature" }] } },
+        inputLabels: "bugfix,,new-feature,",
+    });
+    assert.doesNotThrow(() => runAction());
+});
+
 test("throws when none of the PR labels match the required labels", () => {
     stubEvent({
         event: { pull_request: { labels: [{ name: "documentation" }, { name: "question" }] } },
