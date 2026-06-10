@@ -1,4 +1,4 @@
-const fs = require("fs");
+const fs = require("node:fs")
 
 function runAction() {
     const eventPath = process.env.GITHUB_EVENT_PATH
@@ -23,7 +23,12 @@ function runAction() {
         throw new Error("No required labels defined for the action.")
     }
 
-    const requiredLabels = new Set(inputLabels.split(",").map(label => label.trim()))
+    const requiredLabels = new Set(inputLabels.split(",").map(label => label.trim()).filter(Boolean))
+
+    if (requiredLabels.size === 0) {
+        throw new Error("No required labels defined for the action.")
+    }
+
     const prLabels = eventData.pull_request.labels.map(label => label.name)
 
     console.log(`Required labels (${Array.from(requiredLabels).join(",")})`)
@@ -33,17 +38,23 @@ function runAction() {
     console.log(`Found ${matchingLabels.length} matching label(s) on the pull request (${matchingLabels.join(",")})`)
 
     if (matchingLabels.length === 0) {
-        throw new Error("No matching required labels found.");
+        throw new Error("No matching required labels found.")
     }
+}
+
+// Workflow command data must stay on a single line; see
+// https://docs.github.com/actions/reference/workflow-commands-for-github-actions
+function escapeData(data) {
+    return data.replace(/%/g, "%25").replace(/\r/g, "%0D").replace(/\n/g, "%0A")
 }
 
 if (require.main === module) {
     try {
-        runAction();
+        runAction()
     } catch (err) {
-        console.log("::error::", err.message || err.toString())
+        console.log(`::error::${escapeData(err.message || err.toString())}`)
         process.exitCode = 1
     }
 }
 
-module.exports = { runAction };
+module.exports = { runAction }
