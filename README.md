@@ -1,6 +1,27 @@
 # action-require-labels
 
-This action provides a simple solution to require specific labels on pull requests. Without the need to use the GitHub API and tokens.
+A GitHub Action that fails when a pull request is missing required labels — without using the GitHub API or tokens.
+
+It is made for maintainers who want to enforce a labeling policy on pull requests before merge. Typical use cases:
+
+- Requiring a change-type label (like `bugfix` or `new-feature`) so generated release notes and changelogs stay accurate.
+- Requiring a triage or size label before a pull request can be reviewed.
+- Blocking merges while labels like `do-not-merge` or `wip` are present (see [inverted usage](#failing-when-any-of-the-labels-exist-inverted)).
+
+Add the check as a required status check on your branch to make the labels mandatory before merge.
+
+## Why this action?
+
+- **No token, no API calls** — labels are read straight from the workflow event payload, so the action runs with `permissions: {}`.
+- **Zero dependencies** — the entire action is a single small script ([action.js](action.js)) you can audit in one read, with no third-party packages.
+- **Composable** — match any of several labels in one step, combine steps to require [one label from each set](#requiring-one-label-from-each-of-multiple-sets), or [invert the check](#failing-when-any-of-the-labels-exist-inverted) to block labels.
+
+## How it works
+
+The action reads the pull request labels from the event payload and succeeds when at least one of the configured labels is present.
+
+- It only works on `pull_request` events; it fails on any other event.
+- It runs on Node 24, so the runner needs to support the `node24` action runtime.
 
 ## Inputs
 
@@ -9,6 +30,20 @@ This action provides a simple solution to require specific labels on pull reques
 **Required** Comma separated string of labels to look for.
 
 The check passes when the pull request has **at least one** of the listed labels (OR matching), not all of them. For example, with `bugfix, breaking-change, new-feature`, a pull request labeled with any single one of those passes. It fails only when none of the listed labels are present.
+
+Labels are matched against the pull request labels exactly, including casing. Whitespace around each comma-separated entry is ignored.
+
+## Behavior
+
+The result is communicated through the step's success or failure; the action has no outputs.
+
+The step **passes** when the pull request has at least one of the configured labels.
+
+The step **fails** when:
+
+- The pull request has none of the configured labels.
+- The pull request has no labels at all.
+- The workflow was not triggered by a `pull_request` event.
 
 ## Example usage
 
@@ -39,9 +74,11 @@ jobs:
               bugfix, breaking-change, new-feature
 ```
 
+The `labeled` and `unlabeled` trigger types make the check re-run whenever labels are added or removed, so the status always reflects the current labels.
+
 ## Advanced usage
 
-### Requiring one of multiple sets of labels
+### Requiring one label from each of multiple sets
 
 Add the action multiple times to require one label from *each* set (combining the sets with AND).
 
@@ -100,3 +137,7 @@ When the pull request has no labels at all, the action exits with a failure, so 
 ```
 
 </details>
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).
