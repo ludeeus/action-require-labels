@@ -2,7 +2,7 @@ name: 'action-require-labels'
 description: 'Require specific labels on PRs'
 inputs:
   labels:
-    description: 'Labels to look for, separated by commas or newlines.'
+    description: 'Labels to look for, one per line.'
     required: true
 runs:
   using: 'node24'
