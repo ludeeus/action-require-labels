@@ -37,16 +37,16 @@ Both of these are equivalent:
 
 ```yaml
 with:
-  labels: >-
-      bugfix, breaking-change, new-feature
-```
-
-```yaml
-with:
   labels: |
     bugfix
     breaking-change
     new-feature
+```
+
+```yaml
+with:
+  labels: >-
+      bugfix, breaking-change, new-feature
 ```
 
 ## Behavior
@@ -86,8 +86,10 @@ jobs:
       - name: Check the labels
         uses: ludeeus/action-require-labels@2.0.0
         with:
-          labels: >-
-              bugfix, breaking-change, new-feature
+          labels: |
+            bugfix
+            breaking-change
+            new-feature
 ```
 
 The `labeled` and `unlabeled` trigger types make the check re-run whenever labels are added or removed, so the status always reflects the current labels.
@@ -111,14 +113,18 @@ The example below requires the pull request to have at least one **type** label 
       - name: Check the type label
         uses: ludeeus/action-require-labels@2.0.0
         with:
-          labels: >-
-              bugfix, breaking-change, new-feature
+          labels: |
+            bugfix
+            breaking-change
+            new-feature
 
       - name: Check the size label
         uses: ludeeus/action-require-labels@2.0.0
         with:
-          labels: >-
-              small, medium, large
+          labels: |
+            small
+            medium
+            large
 ```
 
 </details>
@@ -142,8 +148,10 @@ When the pull request has no labels at all, the action exits with a failure, so 
         continue-on-error: true
         uses: ludeeus/action-require-labels@2.0.0
         with:
-          labels: >-
-              do-not-merge, wip, blocked
+          labels: |
+            do-not-merge
+            wip
+            blocked
 
       - name: Fail if a blocking label is present
         if: steps.blocking.outcome == 'success'
