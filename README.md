@@ -39,6 +39,8 @@ jobs:
               bugfix, breaking-change, new-feature
 ```
 
+## Advanced usage
+
 <details>
 <summary>Requiring one of multiple sets of labels</summary>
 
@@ -60,6 +62,33 @@ The example below requires the pull request to have at least one **type** label 
         with:
           labels: >-
               small, medium, large
+```
+
+</details>
+
+<details>
+<summary>Failing when any of the labels exist (inverted)</summary>
+
+The action passes when the pull request has **at least one** of the listed labels. To invert this — failing when **any** of the labels are present (for example to block merging on `do-not-merge`, `wip` or `blocked`) — run the action with `continue-on-error: true` to capture its outcome, then fail a follow-up step when that outcome was `success`.
+
+When the pull request has no labels at all, the action exits with a failure, so the inverted check correctly passes (no blocking label is present).
+
+```yaml
+    ...
+    steps:
+      - name: Check for blocking labels
+        id: blocking
+        continue-on-error: true
+        uses: ludeeus/action-require-labels@2.0.0
+        with:
+          labels: >-
+              do-not-merge, wip, blocked
+
+      - name: Fail if a blocking label is present
+        if: steps.blocking.outcome == 'success'
+        run: |
+          echo "::error::A blocking label is present on the pull request."
+          exit 1
 ```
 
 </details>
