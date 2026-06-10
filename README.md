@@ -12,7 +12,7 @@ Add the check as a required status check on your branch to make the labels manda
 
 ## Why this action?
 
-- **No token, no API calls** — labels are read straight from the workflow event payload, so the action runs with `permissions: {}`. There is nothing to leak, no rate limits and no extra setup.
+- **No token, no API calls** — labels are read straight from the workflow event payload, so the action runs with `permissions: {}`.
 - **Zero dependencies** — the entire action is a single small script ([action.js](action.js)) you can audit in one read, with no third-party packages.
 - **Composable** — match any of several labels in one step, combine steps to require [one label from each set](#requiring-one-label-from-each-of-multiple-sets), or [invert the check](#failing-when-any-of-the-labels-exist-inverted) to block labels.
 
