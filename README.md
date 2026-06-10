@@ -46,7 +46,7 @@ jobs:
 Add the action multiple times to require one label from *each* set (combining the sets with AND).
 
 <details>
-<summary>Example</summary>
+<summary>More details and example</summary>
 
 Because each invocation requires **at least one** of its labels (OR matching), you can add the action multiple times to require one label from *each* set. Every step must pass for the job to succeed, so this effectively combines the sets with AND.
 
@@ -75,7 +75,7 @@ The example below requires the pull request to have at least one **type** label 
 Invert the check to fail when **any** of the listed labels are present (for example to block merging on `do-not-merge`, `wip` or `blocked`).
 
 <details>
-<summary>Example</summary>
+<summary>More details and example</summary>
 
 The action passes when the pull request has **at least one** of the listed labels. To invert this — failing when **any** of the labels are present (for example to block merging on `do-not-merge`, `wip` or `blocked`) — run the action with `continue-on-error: true` to capture its outcome, then fail a follow-up step when that outcome was `success`.
 
