@@ -4,12 +4,9 @@ const fs = require("node:fs");
 
 const { runAction, ActionError } = require("./action.js");
 
-// Stubs the filesystem and environment that runAction reads. Nothing here
-// touches the real filesystem (fs is mocked) and the env values are
-// test-controlled and cleared after every test.
 function stubEvent(opts = {}) {
-    // Use `in` checks (not default params) so callers can pass `undefined`
-    // explicitly to assert the "env var not set" branches.
+    // `in` checks rather than default params so callers can pass `undefined`
+    // to assert the "env var not set" branches.
     const event = "event" in opts ? opts.event : { pull_request: { labels: [{ name: "bugfix" }] } };
     const exists = "exists" in opts ? opts.exists : true;
     const eventPath = "eventPath" in opts ? opts.eventPath : "/mock/event.json";

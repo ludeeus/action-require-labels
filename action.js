@@ -1,7 +1,6 @@
 const fs = require("node:fs")
 
-// Errors raised intentionally by the action, with single-line messages that
-// are safe to emit as workflow command annotations.
+// Messages must stay single-line; they are emitted directly as ::error:: annotations.
 class ActionError extends Error {}
 
 function runAction() {
