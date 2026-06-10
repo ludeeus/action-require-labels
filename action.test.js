@@ -2,7 +2,7 @@ const { test, mock, afterEach } = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 
-const { runAction } = require("./action.js");
+const { runAction, ActionError } = require("./action.js");
 
 // Stubs the filesystem and environment that runAction reads. Nothing here
 // touches the real filesystem (fs is mocked) and the env values are
@@ -86,6 +86,17 @@ test("throws when none of the PR labels match the required labels", () => {
         inputLabels: "bugfix,breaking-change,new-feature",
     });
     assert.throws(() => runAction(), /No matching required labels found\./);
+});
+
+test("failures raised by the action are ActionError instances", () => {
+    stubEvent({ event: { push: {} } });
+    assert.throws(() => runAction(), ActionError);
+});
+
+test("throws a non-ActionError when the event file is not valid JSON", () => {
+    stubEvent();
+    mock.method(fs, "readFileSync", () => "{ not json");
+    assert.throws(() => runAction(), (err) => err instanceof SyntaxError && !(err instanceof ActionError));
 });
 
 test("succeeds when at least one PR label matches a required label", () => {
