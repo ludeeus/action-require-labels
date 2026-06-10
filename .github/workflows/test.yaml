@@ -24,13 +24,13 @@ jobs:
         uses: ./
         with:
           labels: |
-            bugfix
             breaking-change
-            new-feature
-            dependencies
+            bugfix
             ci
+            dependencies
             documentation
             internal
+            new-feature
 
   run_the_action_comma:
     name: "Run the action (comma separated labels)"
@@ -43,7 +43,7 @@ jobs:
         uses: ./
         with:
           labels: >-
-            bugfix, breaking-change, new-feature, dependencies, ci, documentation, internal
+            breaking-change, bugfix, ci, dependencies, documentation, internal, new-feature
 
   run_the_action_inverted:
     name: "Run the action (inverted)"
@@ -58,9 +58,9 @@ jobs:
         uses: ./
         with:
           labels: |
+            blocked
             do-not-merge
             wip
-            blocked
 
       - name: Fail if a blocking label is present
         if: steps.blocking.outcome == 'success'
@@ -81,7 +81,7 @@ jobs:
         uses: ./
         with:
           labels: >-
-            do-not-merge, wip, blocked
+            blocked, do-not-merge, wip
 
       - name: Fail if a blocking label is present
         if: steps.blocking.outcome == 'success'
