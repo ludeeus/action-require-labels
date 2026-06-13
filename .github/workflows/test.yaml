@@ -23,28 +23,8 @@ jobs:
       - name: Run the local action
         uses: ./
         with:
-          labels: |
-            breaking-change
-            bugfix
-            ci
-            dependencies
-            documentation
-            internal
-            new-feature
-            refactor
-
-  run_the_action_comma:
-    name: "Run the action (comma separated labels)"
-    runs-on: ubuntu-slim
-    steps:
-      - name: Checkout
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
-
-      - name: Run the local action
-        uses: ./
-        with:
           labels: >-
-            breaking-change, bugfix, ci, dependencies, documentation, internal, new-feature, refactor
+            bugfix, breaking-change, new-feature, dependencies, ci, documentation, internal, refactor
 
   run_the_action_inverted:
     name: "Run the action (inverted)"
@@ -58,31 +38,8 @@ jobs:
         continue-on-error: true
         uses: ./
         with:
-          labels: |
-            blocked
-            do-not-merge
-            wip
-
-      - name: Fail if a blocking label is present
-        if: steps.blocking.outcome == 'success'
-        run: |
-          echo "::error::A blocking label is present on the pull request."
-          exit 1
-
-  run_the_action_inverted_comma:
-    name: "Run the action (inverted, comma separated labels)"
-    runs-on: ubuntu-slim
-    steps:
-      - name: Checkout
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
-
-      - name: Run the local action
-        id: blocking
-        continue-on-error: true
-        uses: ./
-        with:
           labels: >-
-            blocked, do-not-merge, wip
+            do-not-merge, wip, blocked
 
       - name: Fail if a blocking label is present
         if: steps.blocking.outcome == 'success'

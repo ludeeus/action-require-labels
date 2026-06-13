@@ -27,19 +27,11 @@ The action reads the pull request labels from the event payload and succeeds whe
 
 ### `labels`
 
-**Required** Labels to look for, one per line.
+**Required** Comma separated string of labels to look for.
 
-The check passes when the pull request has **at least one** of the listed labels (OR matching), not all of them. For example, with `breaking-change`, `bugfix` and `new-feature` configured, a pull request labeled with any single one of those passes. It fails only when none of the listed labels are present.
+The check passes when the pull request has **at least one** of the listed labels (OR matching), not all of them. For example, with `bugfix, breaking-change, new-feature`, a pull request labeled with any single one of those passes. It fails only when none of the listed labels are present.
 
-Labels are matched against the pull request labels exactly, including casing. Whitespace around each entry is ignored, as are blank lines.
-
-```yaml
-with:
-  labels: |
-    breaking-change
-    bugfix
-    new-feature
-```
+Labels are matched against the pull request labels exactly, including casing. Whitespace around each comma-separated entry is ignored.
 
 ## Behavior
 
@@ -78,10 +70,8 @@ jobs:
       - name: Check the labels
         uses: ludeeus/action-require-labels@2.0.0
         with:
-          labels: |
-            breaking-change
-            bugfix
-            new-feature
+          labels: >-
+              bugfix, breaking-change, new-feature
 ```
 
 The `labeled` and `unlabeled` trigger types make the check re-run whenever labels are added or removed, so the status always reflects the current labels.
@@ -97,7 +87,7 @@ Add the action multiple times to require one label from *each* set (combining th
 
 Because each invocation requires **at least one** of its labels (OR matching), you can add the action multiple times to require one label from *each* set. Every step must pass for the job to succeed, so this effectively combines the sets with AND.
 
-The example below requires the pull request to have at least one **type** label (`breaking-change`, `bugfix` or `new-feature`) **and** at least one **size** label (`large`, `medium` or `small`).
+The example below requires the pull request to have at least one **type** label (`bugfix`, `breaking-change` or `new-feature`) **and** at least one **size** label (`small`, `medium` or `large`).
 
 ```yaml
     ...
@@ -105,30 +95,26 @@ The example below requires the pull request to have at least one **type** label 
       - name: Check the type label
         uses: ludeeus/action-require-labels@2.0.0
         with:
-          labels: |
-            breaking-change
-            bugfix
-            new-feature
+          labels: >-
+              bugfix, breaking-change, new-feature
 
       - name: Check the size label
         uses: ludeeus/action-require-labels@2.0.0
         with:
-          labels: |
-            large
-            medium
-            small
+          labels: >-
+              small, medium, large
 ```
 
 </details>
 
 ### Failing when any of the labels exist (inverted)
 
-Invert the check to fail when **any** of the listed labels are present (for example to block merging on `blocked`, `do-not-merge` or `wip`).
+Invert the check to fail when **any** of the listed labels are present (for example to block merging on `do-not-merge`, `wip` or `blocked`).
 
 <details>
 <summary>More details and example</summary>
 
-The action passes when the pull request has **at least one** of the listed labels. To invert this — failing when **any** of the labels are present (for example to block merging on `blocked`, `do-not-merge` or `wip`) — run the action with `continue-on-error: true` to capture its outcome, then fail a follow-up step when that outcome was `success`.
+The action passes when the pull request has **at least one** of the listed labels. To invert this — failing when **any** of the labels are present (for example to block merging on `do-not-merge`, `wip` or `blocked`) — run the action with `continue-on-error: true` to capture its outcome, then fail a follow-up step when that outcome was `success`.
 
 When the pull request has no labels at all, the action exits with a failure, so the inverted check correctly passes (no blocking label is present).
 
@@ -140,10 +126,8 @@ When the pull request has no labels at all, the action exits with a failure, so 
         continue-on-error: true
         uses: ludeeus/action-require-labels@2.0.0
         with:
-          labels: |
-            blocked
-            do-not-merge
-            wip
+          labels: >-
+              do-not-merge, wip, blocked
 
       - name: Fail if a blocking label is present
         if: steps.blocking.outcome == 'success'

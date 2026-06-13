@@ -103,32 +103,3 @@ test("trims whitespace around required labels before matching", () => {
     });
     assert.doesNotThrow(() => runAction());
 });
-
-test("accepts newline separated required labels", () => {
-    stubEvent({
-        event: { pull_request: { labels: [{ name: "breaking-change" }] } },
-        inputLabels: "bugfix\nbreaking-change\nnew-feature",
-    });
-    assert.doesNotThrow(() => runAction());
-});
-
-test("ignores blank lines and trailing newlines from multiline input", () => {
-    stubEvent({
-        event: { pull_request: { labels: [{ name: "new-feature" }] } },
-        inputLabels: "bugfix\n\nbreaking-change\nnew-feature\n",
-    });
-    assert.doesNotThrow(() => runAction());
-});
-
-test("accepts a mix of commas and newlines as separators", () => {
-    stubEvent({
-        event: { pull_request: { labels: [{ name: "bugfix" }] } },
-        inputLabels: "bugfix, breaking-change\nnew-feature",
-    });
-    assert.doesNotThrow(() => runAction());
-});
-
-test("throws when the required labels input is only whitespace", () => {
-    stubEvent({ inputLabels: " \n , \n" });
-    assert.throws(() => runAction(), /No required labels defined for the action\./);
-});
