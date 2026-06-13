@@ -19,6 +19,14 @@ function runAction() {
 
     const inputLabels = process.env.INPUT_LABELS
 
+    if (inputLabels && inputLabels.includes(",")) {
+        console.log(
+            "::warning::The labels input appears to be comma-separated. " +
+            "Provide one label per line (newline-separated) instead; " +
+            "comma support is deprecated."
+        )
+    }
+
     const requiredLabels = new Set(
         (inputLabels || "").split(/[,\n]/).map(label => label.trim()).filter(Boolean)
     )

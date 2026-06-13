@@ -132,3 +132,29 @@ test("throws when the required labels input is only whitespace", () => {
     stubEvent({ inputLabels: " \n , \n" });
     assert.throws(() => runAction(), /No required labels defined for the action\./);
 });
+
+test("warns when the required labels input is comma-separated", () => {
+    stubEvent({
+        event: { pull_request: { labels: [{ name: "bugfix" }] } },
+        inputLabels: "bugfix,breaking-change",
+    });
+    const log = mock.method(console, "log");
+    assert.doesNotThrow(() => runAction());
+    const warned = log.mock.calls.some(call =>
+        String(call.arguments[0]).startsWith("::warning::")
+    );
+    assert.ok(warned, "expected a ::warning:: line to be logged");
+});
+
+test("does not warn for purely newline-separated input", () => {
+    stubEvent({
+        event: { pull_request: { labels: [{ name: "breaking-change" }] } },
+        inputLabels: "bugfix\nbreaking-change\nnew-feature",
+    });
+    const log = mock.method(console, "log");
+    assert.doesNotThrow(() => runAction());
+    const warned = log.mock.calls.some(call =>
+        String(call.arguments[0]).startsWith("::warning::")
+    );
+    assert.ok(!warned, "expected no ::warning:: line to be logged");
+});
