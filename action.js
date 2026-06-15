@@ -51,6 +51,10 @@ function setOutput(name, value) {
         return
     }
 
+    if (!name) {
+        throw new Error("Output name must not be empty.")
+    }
+
     if (/[\r\n=]/.test(name)) {
         throw new Error(`Output name "${name}" must not contain "=", a newline or a carriage return.`)
     }

@@ -163,6 +163,15 @@ for (const { label, name } of [
     });
 }
 
+test("setOutput throws when the name is empty", () => {
+    process.env.GITHUB_OUTPUT = "/mock/output.txt";
+
+    const appendMock = mock.method(fs, "appendFileSync", () => {});
+
+    assert.throws(() => setOutput("", "1"), /must not be empty/);
+    assert.equal(appendMock.mock.callCount(), 0);
+});
+
 test("does not write outputs when the action fails before evaluating labels", () => {
     stubEvent({ event: { push: {} } });
     process.env.GITHUB_OUTPUT = "/mock/output.txt";
