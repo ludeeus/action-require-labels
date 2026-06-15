@@ -56,7 +56,7 @@ function setOutput(name, value) {
 
     const stringValue = String(value)
 
-    if (stringValue.includes("\n")) {
+    if (/[\r\n]/.test(stringValue)) {
         throw new Error(`Output "${name}" must not contain a newline.`)
     }
 
