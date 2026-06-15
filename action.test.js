@@ -133,14 +133,20 @@ test("writes a zero matching label count to GITHUB_OUTPUT before failing on no m
     assert.match(writes.join(""), /^matching_label_count=0\n$/);
 });
 
-test("setOutput throws when the value contains a newline", () => {
-    process.env.GITHUB_OUTPUT = "/mock/output.txt";
+for (const { label, value } of [
+    { label: "a newline", value: "line1\nline2" },
+    { label: "a carriage return", value: "line1\rline2" },
+    { label: "a carriage return and newline", value: "line1\r\nline2" },
+]) {
+    test(`setOutput throws when the value contains ${label}`, () => {
+        process.env.GITHUB_OUTPUT = "/mock/output.txt";
 
-    const appendMock = mock.method(fs, "appendFileSync", () => {});
+        const appendMock = mock.method(fs, "appendFileSync", () => {});
 
-    assert.throws(() => setOutput("example", "line1\nline2"), /must not contain a newline/);
-    assert.equal(appendMock.mock.callCount(), 0);
-});
+        assert.throws(() => setOutput("example", value), /must not contain a newline or carriage return/);
+        assert.equal(appendMock.mock.callCount(), 0);
+    });
+}
 
 test("does not write outputs when GITHUB_OUTPUT is not set", () => {
     stubEvent({
