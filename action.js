@@ -37,8 +37,20 @@ function runAction() {
     const matchingLabels = prLabels.filter(label => requiredLabels.has(label))
     console.log(`Found ${matchingLabels.length} matching label(s) on the pull request (${matchingLabels.join(",")})`)
 
+    setOutput("matching_label_count", matchingLabels.length)
+
     if (matchingLabels.length === 0) {
         throw new Error("No matching required labels found.")
+    }
+}
+
+// Sets a step output by appending to the GITHUB_OUTPUT file (the mechanism used
+// by the node24 runtime). No-ops when GITHUB_OUTPUT is unset, so local runs and
+// tests are safe. Output names and counts are single-line and need no escaping.
+function setOutput(name, value) {
+    const outputPath = process.env.GITHUB_OUTPUT
+    if (outputPath) {
+        fs.appendFileSync(outputPath, `${name}=${value}\n`)
     }
 }
 

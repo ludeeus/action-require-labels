@@ -4,6 +4,9 @@ inputs:
   labels:
     description: 'Comma separated string of labels to look for.'
     required: true
+outputs:
+  matching_label_count:
+    description: 'The number of required labels found on the pull request.'
 runs:
   using: 'node24'
   main: 'action.js'

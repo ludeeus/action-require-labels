@@ -33,9 +33,17 @@ The check passes when the pull request has **at least one** of the listed labels
 
 Labels are matched against the pull request labels exactly, including casing. Whitespace around each comma-separated entry is ignored.
 
+## Outputs
+
+### `matching_label_count`
+
+The number of required labels found on the pull request.
+
+The output is set on both the passing path and the no-match failing path (where it is `0`), so it is available to later steps even when the step fails — use `continue-on-error: true` to read it after a failure. It is not set when the action fails before evaluating the labels (for example on a non-`pull_request` event or when the pull request has no labels at all).
+
 ## Behavior
 
-The result is communicated through the step's success or failure; the action has no outputs.
+The primary result is communicated through the step's success or failure; the matching label count is additionally exposed via the [`matching_label_count` output](#matching_label_count).
 
 The step **passes** when the pull request has at least one of the configured labels.
 

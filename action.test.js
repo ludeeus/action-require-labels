@@ -35,6 +35,7 @@ afterEach(() => {
     mock.restoreAll();
     delete process.env.GITHUB_EVENT_PATH;
     delete process.env.INPUT_LABELS;
+    delete process.env.GITHUB_OUTPUT;
 });
 
 test("throws when the event path is not set", () => {
@@ -102,4 +103,44 @@ test("trims whitespace around required labels before matching", () => {
         inputLabels: " bugfix , breaking-change , new-feature ",
     });
     assert.doesNotThrow(() => runAction());
+});
+
+test("writes the matching label count to the GITHUB_OUTPUT file on success", () => {
+    stubEvent({
+        event: { pull_request: { labels: [{ name: "bugfix" }, { name: "new-feature" }, { name: "question" }] } },
+        inputLabels: "bugfix,breaking-change,new-feature",
+    });
+    process.env.GITHUB_OUTPUT = "/mock/output.txt";
+
+    const writes = [];
+    mock.method(fs, "appendFileSync", (_path, data) => writes.push(data));
+
+    assert.doesNotThrow(() => runAction());
+    assert.ok(writes.join("").includes("matching_label_count=2"));
+});
+
+test("writes a zero matching label count to GITHUB_OUTPUT before failing on no match", () => {
+    stubEvent({
+        event: { pull_request: { labels: [{ name: "documentation" }] } },
+        inputLabels: "bugfix,breaking-change,new-feature",
+    });
+    process.env.GITHUB_OUTPUT = "/mock/output.txt";
+
+    const writes = [];
+    mock.method(fs, "appendFileSync", (_path, data) => writes.push(data));
+
+    assert.throws(() => runAction(), /No matching required labels found\./);
+    assert.ok(writes.join("").includes("matching_label_count=0"));
+});
+
+test("does not write outputs when GITHUB_OUTPUT is not set", () => {
+    stubEvent({
+        event: { pull_request: { labels: [{ name: "bugfix" }] } },
+        inputLabels: "bugfix",
+    });
+
+    const appendMock = mock.method(fs, "appendFileSync", () => {});
+
+    assert.doesNotThrow(() => runAction());
+    assert.equal(appendMock.mock.callCount(), 0);
 });
