@@ -43,7 +43,7 @@ The output is set on both the passing path and the no-match failing path (where 
 
 ## Behavior
 
-The primary result is communicated through the step's success or failure; the matching label count is additionally exposed via the [`matching_label_count` output](#matching_label_count).
+The primary result is communicated through the step's success or failure; additional details are exposed via the step's [outputs](#outputs).
 
 The step **passes** when the pull request has at least one of the configured labels.
 
