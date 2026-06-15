@@ -44,12 +44,7 @@ function runAction() {
     }
 }
 
-// Sets a step output by appending "name=value" to the GITHUB_OUTPUT file (the
-// mechanism used by the node24 runtime). No-ops when GITHUB_OUTPUT is unset, so
-// local runs and tests are safe. The name must not contain "=", a newline or a
-// carriage return (any of which would break the "name=value" format or allow
-// output injection), and the value must be single-line; either raises an error
-// rather than corrupting the output file.
+// Appends "name=value" to the GITHUB_OUTPUT file; no-op when unset.
 function setOutput(name, value) {
     const outputPath = process.env.GITHUB_OUTPUT
     if (!outputPath) {
