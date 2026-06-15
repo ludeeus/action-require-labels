@@ -46,13 +46,18 @@ function runAction() {
 
 // Sets a step output by appending "name=value" to the GITHUB_OUTPUT file (the
 // mechanism used by the node24 runtime). No-ops when GITHUB_OUTPUT is unset, so
-// local runs and tests are safe. Only single-line values are supported; a value
-// containing a newline or carriage return raises an error rather than corrupting
-// the output file.
+// local runs and tests are safe. The name must not contain "=", a newline or a
+// carriage return (any of which would break the "name=value" format or allow
+// output injection), and the value must be single-line; either raises an error
+// rather than corrupting the output file.
 function setOutput(name, value) {
     const outputPath = process.env.GITHUB_OUTPUT
     if (!outputPath) {
         return
+    }
+
+    if (/[\r\n=]/.test(name)) {
+        throw new Error(`Output name "${name}" must not contain "=", a newline or a carriage return.`)
     }
 
     const stringValue = String(value)

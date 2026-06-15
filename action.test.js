@@ -148,6 +148,31 @@ for (const { label, value } of [
     });
 }
 
+for (const { label, name } of [
+    { label: "an equals sign", name: "bad=name" },
+    { label: "a newline", name: "bad\nname" },
+    { label: "a carriage return", name: "bad\rname" },
+]) {
+    test(`setOutput throws when the name contains ${label}`, () => {
+        process.env.GITHUB_OUTPUT = "/mock/output.txt";
+
+        const appendMock = mock.method(fs, "appendFileSync", () => {});
+
+        assert.throws(() => setOutput(name, "1"), /Output name .* must not contain "=", a newline or a carriage return/s);
+        assert.equal(appendMock.mock.callCount(), 0);
+    });
+}
+
+test("does not write outputs when the action fails before evaluating labels", () => {
+    stubEvent({ event: { push: {} } });
+    process.env.GITHUB_OUTPUT = "/mock/output.txt";
+
+    const appendMock = mock.method(fs, "appendFileSync", () => {});
+
+    assert.throws(() => runAction(), /This is not a pull request\./);
+    assert.equal(appendMock.mock.callCount(), 0);
+});
+
 test("does not write outputs when GITHUB_OUTPUT is not set", () => {
     stubEvent({
         event: { pull_request: { labels: [{ name: "bugfix" }] } },
