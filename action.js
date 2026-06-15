@@ -1,5 +1,4 @@
 const fs = require("node:fs")
-const crypto = require("node:crypto")
 
 function runAction() {
     const eventPath = process.env.GITHUB_EVENT_PATH
@@ -45,24 +44,23 @@ function runAction() {
     }
 }
 
-// Sets a step output by appending to the GITHUB_OUTPUT file (the mechanism used
-// by the node24 runtime). No-ops when GITHUB_OUTPUT is unset, so local runs and
-// tests are safe. Uses the heredoc/delimiter format so values are safe even when
-// they contain newlines or "=" (matches @actions/core's prepareKeyValueMessage).
+// Sets a step output by appending "name=value" to the GITHUB_OUTPUT file (the
+// mechanism used by the node24 runtime). No-ops when GITHUB_OUTPUT is unset, so
+// local runs and tests are safe. Only single-line values are supported; a
+// multi-line value raises an error rather than corrupting the output file.
 function setOutput(name, value) {
     const outputPath = process.env.GITHUB_OUTPUT
     if (!outputPath) {
         return
     }
 
-    const delimiter = `ghadelimiter_${crypto.randomUUID()}`
     const stringValue = String(value)
 
-    if (name.includes(delimiter) || stringValue.includes(delimiter)) {
-        throw new Error(`Unexpected output: name and value must not contain the delimiter "${delimiter}"`)
+    if (stringValue.includes("\n")) {
+        throw new Error(`Output "${name}" must not contain a newline.`)
     }
 
-    fs.appendFileSync(outputPath, `${name}<<${delimiter}\n${stringValue}\n${delimiter}\n`)
+    fs.appendFileSync(outputPath, `${name}=${stringValue}\n`)
 }
 
 // Workflow command data must stay on a single line; see

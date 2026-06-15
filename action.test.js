@@ -1,7 +1,6 @@
 const { test, mock, afterEach } = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
-const crypto = require("node:crypto");
 
 const { runAction, setOutput } = require("./action.js");
 
@@ -117,7 +116,7 @@ test("writes the matching label count to the GITHUB_OUTPUT file on success", () 
     mock.method(fs, "appendFileSync", (_path, data) => writes.push(data));
 
     assert.doesNotThrow(() => runAction());
-    assert.match(writes.join(""), /^matching_label_count<<(ghadelimiter_\S+)\n2\n\1\n$/m);
+    assert.match(writes.join(""), /^matching_label_count=2\n$/);
 });
 
 test("writes a zero matching label count to GITHUB_OUTPUT before failing on no match", () => {
@@ -131,26 +130,16 @@ test("writes a zero matching label count to GITHUB_OUTPUT before failing on no m
     mock.method(fs, "appendFileSync", (_path, data) => writes.push(data));
 
     assert.throws(() => runAction(), /No matching required labels found\./);
-    assert.match(writes.join(""), /^matching_label_count<<(ghadelimiter_\S+)\n0\n\1\n$/m);
+    assert.match(writes.join(""), /^matching_label_count=0\n$/);
 });
 
-test("setOutput wraps multi-line values between matching delimiters", () => {
+test("setOutput throws when the value contains a newline", () => {
     process.env.GITHUB_OUTPUT = "/mock/output.txt";
 
-    const writes = [];
-    mock.method(fs, "appendFileSync", (_path, data) => writes.push(data));
+    const appendMock = mock.method(fs, "appendFileSync", () => {});
 
-    setOutput("example", "line1\nline2");
-
-    assert.match(writes.join(""), /^example<<(ghadelimiter_\S+)\nline1\nline2\n\1\n$/);
-});
-
-test("setOutput throws when the value contains the generated delimiter", () => {
-    process.env.GITHUB_OUTPUT = "/mock/output.txt";
-    mock.method(crypto, "randomUUID", () => "fixed");
-    mock.method(fs, "appendFileSync", () => {});
-
-    assert.throws(() => setOutput("example", "before ghadelimiter_fixed after"), /delimiter/);
+    assert.throws(() => setOutput("example", "line1\nline2"), /must not contain a newline/);
+    assert.equal(appendMock.mock.callCount(), 0);
 });
 
 test("does not write outputs when GITHUB_OUTPUT is not set", () => {
