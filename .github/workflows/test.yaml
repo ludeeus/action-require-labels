@@ -33,9 +33,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
 
-      # The pull request carries more than one of these labels, so capping the
-      # allowed matches at 1 makes the action fail by design. continue-on-error
-      # keeps the job green while still exercising the cap-exceeded failure path.
       - name: Run the local action
         continue-on-error: true
         uses: ./

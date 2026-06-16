@@ -29,7 +29,6 @@ function runAction() {
         throw new Error("No required labels defined for the action.")
     }
 
-    // Defaults to the number of supplied labels, so the cap is a no-op unless set.
     let maximumMatchingLabels = requiredLabels.size
 
     const inputMaximum = process.env.INPUT_MAXIMUM_MATCHING_LABELS
