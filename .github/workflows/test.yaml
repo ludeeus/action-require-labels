@@ -33,13 +33,25 @@ jobs:
       - name: Checkout
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
 
+      - name: Write a pull request event with two matching labels
+        run: echo '{"pull_request":{"labels":[{"name":"bugfix"},{"name":"new-feature"}]}}' > "${RUNNER_TEMP}/event.json"
+
       - name: Run the local action
+        id: maximum
         continue-on-error: true
+        env:
+          GITHUB_EVENT_PATH: ${{ runner.temp }}/event.json
         uses: ./
         with:
           labels: >-
-            bugfix, breaking-change, new-feature, dependencies, ci, documentation, internal, refactor
+            bugfix, breaking-change, new-feature
           maximum_matching_labels: 1
+
+      - name: Fail unless the action rejected the extra label
+        if: steps.maximum.outcome != 'failure'
+        run: |
+          echo "::error::Expected the action to fail when matching labels exceed maximum_matching_labels."
+          exit 1
 
   run_the_action_inverted:
     name: "Run the action (inverted)"
