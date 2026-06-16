@@ -123,7 +123,7 @@ Use [`maximum_matching_labels`](#maximum_matching_labels) to require **exactly o
 <details>
 <summary>More details and example</summary>
 
-The action already requires **at least one** of the listed labels. Setting `maximum_matching_labels: 1` adds the upper bound, so the step passes only when exactly one of the labels is present — no follow-up step or `continue-on-error` needed.
+The action already requires **at least one** of the listed labels. Setting `maximum_matching_labels: 1` adds the upper bound, so the step passes only when exactly one of the labels is present.
 
 ```yaml
     ...
