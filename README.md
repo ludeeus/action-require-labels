@@ -33,6 +33,14 @@ The check passes when the pull request has **at least one** of the listed labels
 
 Labels are matched against the pull request labels exactly, including casing. Whitespace around each comma-separated entry is ignored.
 
+### `maximum_matching_labels`
+
+**Optional** Maximum number of matching labels allowed on the pull request.
+
+The check fails when **more than** this many of the listed labels are present. It defaults to the number of labels supplied in [`labels`](#labels), so it is a no-op unless you set it to a lower value. Combined with the default "at least one" rule, setting it to `1` enforces **exactly one** matching label.
+
+It must be a positive integer.
+
 ## Behavior
 
 The result is communicated through the step's success or failure; the action has no outputs.
@@ -42,6 +50,7 @@ The step **passes** when the pull request has at least one of the configured lab
 The step **fails** when:
 
 - The pull request has none of the configured labels.
+- The pull request has more matching labels than [`maximum_matching_labels`](#maximum_matching_labels) allows.
 - The pull request has no labels at all.
 - The workflow was not triggered by a `pull_request` event.
 
@@ -103,6 +112,28 @@ The example below requires the pull request to have at least one **type** label 
         with:
           labels: >-
               small, medium, large
+```
+
+</details>
+
+### Requiring exactly one label
+
+Use [`maximum_matching_labels`](#maximum_matching_labels) to require **exactly one** of the listed labels — for example exactly one priority label.
+
+<details>
+<summary>More details and example</summary>
+
+The action already requires **at least one** of the listed labels. Setting `maximum_matching_labels: 1` adds the upper bound, so the step passes only when exactly one of the labels is present — no follow-up step or `continue-on-error` needed.
+
+```yaml
+    ...
+    steps:
+      - name: Require exactly one priority label
+        uses: ludeeus/action-require-labels@2.0.0
+        with:
+          labels: >-
+              p1, p2, p3
+          maximum_matching_labels: 1
 ```
 
 </details>
