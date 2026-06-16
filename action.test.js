@@ -103,3 +103,34 @@ test("trims whitespace around required labels before matching", () => {
     });
     assert.doesNotThrow(() => runAction());
 });
+
+test("warns when the required labels input contains duplicates", () => {
+    stubEvent({
+        event: { pull_request: { labels: [{ name: "bugfix" }] } },
+        inputLabels: "bugfix,bugfix, bugfix ,new-feature",
+    });
+    mock.method(console, "log");
+
+    assert.doesNotThrow(() => runAction());
+
+    const warnings = console.log.mock.calls
+        .map(call => call.arguments[0])
+        .filter(line => typeof line === "string" && line.startsWith("::warning::"));
+    assert.equal(warnings.length, 1);
+    assert.match(warnings[0], /Duplicate label\(s\) in input: bugfix/);
+});
+
+test("does not warn when the required labels input has no duplicates", () => {
+    stubEvent({
+        event: { pull_request: { labels: [{ name: "bugfix" }] } },
+        inputLabels: "bugfix,breaking-change,new-feature",
+    });
+    mock.method(console, "log");
+
+    assert.doesNotThrow(() => runAction());
+
+    const warnings = console.log.mock.calls
+        .map(call => call.arguments[0])
+        .filter(line => typeof line === "string" && line.startsWith("::warning::"));
+    assert.equal(warnings.length, 0);
+});

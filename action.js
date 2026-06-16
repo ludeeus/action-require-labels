@@ -23,10 +23,18 @@ function runAction() {
         throw new Error("No required labels defined for the action.")
     }
 
-    const requiredLabels = new Set(inputLabels.split(",").map(label => label.trim()).filter(Boolean))
+    const parsedLabels = inputLabels.split(",").map(label => label.trim()).filter(Boolean)
+    const requiredLabels = new Set(parsedLabels)
 
     if (requiredLabels.size === 0) {
         throw new Error("No required labels defined for the action.")
+    }
+
+    const duplicateLabels = [...new Set(
+        parsedLabels.filter((label, index) => parsedLabels.indexOf(label) !== index)
+    )]
+    if (duplicateLabels.length > 0) {
+        console.log(`::warning::${escapeData(`Duplicate label(s) in input: ${duplicateLabels.join(", ")}`)}`)
     }
 
     const prLabels = eventData.pull_request.labels.map(label => label.name)
