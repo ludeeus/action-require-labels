@@ -29,6 +29,16 @@ function runAction() {
         throw new Error("No required labels defined for the action.")
     }
 
+    let maximumMatchingLabels = requiredLabels.size
+
+    const inputMaximum = (process.env.INPUT_MAXIMUM_MATCHING_LABELS || "").trim()
+    if (inputMaximum) {
+        if (!/^\d+$/.test(inputMaximum) || Number(inputMaximum) < 1) {
+            throw new Error("maximum_matching_labels must be a positive integer.")
+        }
+        maximumMatchingLabels = Number(inputMaximum)
+    }
+
     const prLabels = eventData.pull_request.labels.map(label => label.name)
 
     console.log(`Required labels (${Array.from(requiredLabels).join(",")})`)
@@ -39,6 +49,10 @@ function runAction() {
 
     if (matchingLabels.length === 0) {
         throw new Error("No matching required labels found.")
+    }
+
+    if (matchingLabels.length > maximumMatchingLabels) {
+        throw new Error(`Found ${matchingLabels.length} matching label(s), but a maximum of ${maximumMatchingLabels} is allowed.`)
     }
 }
 

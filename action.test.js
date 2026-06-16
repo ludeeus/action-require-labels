@@ -14,6 +14,7 @@ function stubEvent(opts = {}) {
     const exists = "exists" in opts ? opts.exists : true;
     const eventPath = "eventPath" in opts ? opts.eventPath : "/mock/event.json";
     const inputLabels = "inputLabels" in opts ? opts.inputLabels : "bugfix";
+    const maximumMatchingLabels = "maximumMatchingLabels" in opts ? opts.maximumMatchingLabels : undefined;
 
     mock.method(fs, "existsSync", () => exists);
     mock.method(fs, "readFileSync", () => JSON.stringify(event));
@@ -29,12 +30,19 @@ function stubEvent(opts = {}) {
     } else {
         process.env.INPUT_LABELS = inputLabels;
     }
+
+    if (maximumMatchingLabels === undefined) {
+        delete process.env.INPUT_MAXIMUM_MATCHING_LABELS;
+    } else {
+        process.env.INPUT_MAXIMUM_MATCHING_LABELS = maximumMatchingLabels;
+    }
 }
 
 afterEach(() => {
     mock.restoreAll();
     delete process.env.GITHUB_EVENT_PATH;
     delete process.env.INPUT_LABELS;
+    delete process.env.INPUT_MAXIMUM_MATCHING_LABELS;
 });
 
 test("throws when the event path is not set", () => {
@@ -102,4 +110,74 @@ test("trims whitespace around required labels before matching", () => {
         inputLabels: " bugfix , breaking-change , new-feature ",
     });
     assert.doesNotThrow(() => runAction());
+});
+
+test("passes by default when every supplied label matches (cap defaults to supplied count)", () => {
+    stubEvent({
+        event: { pull_request: { labels: [{ name: "bugfix" }, { name: "breaking-change" }, { name: "new-feature" }] } },
+        inputLabels: "bugfix,breaking-change,new-feature",
+    });
+    assert.doesNotThrow(() => runAction());
+});
+
+test("throws when matching labels exceed maximum_matching_labels", () => {
+    stubEvent({
+        event: { pull_request: { labels: [{ name: "bugfix" }, { name: "new-feature" }] } },
+        inputLabels: "bugfix,breaking-change,new-feature",
+        maximumMatchingLabels: "1",
+    });
+    assert.throws(() => runAction(), /Found 2 matching label\(s\), but a maximum of 1 is allowed\./);
+});
+
+test("passes when matching labels equal maximum_matching_labels (boundary, not exceeded)", () => {
+    stubEvent({
+        event: { pull_request: { labels: [{ name: "bugfix" }, { name: "new-feature" }] } },
+        inputLabels: "bugfix,breaking-change,new-feature",
+        maximumMatchingLabels: "2",
+    });
+    assert.doesNotThrow(() => runAction());
+});
+
+test("passes with maximum_matching_labels of 1 when exactly one label matches", () => {
+    stubEvent({
+        event: { pull_request: { labels: [{ name: "bugfix" }, { name: "question" }] } },
+        inputLabels: "bugfix,breaking-change,new-feature",
+        maximumMatchingLabels: "1",
+    });
+    assert.doesNotThrow(() => runAction());
+});
+
+for (const value of ["abc", "0", "-1", "1.5"]) {
+    test(`throws when maximum_matching_labels is "${value}"`, () => {
+        stubEvent({
+            event: { pull_request: { labels: [{ name: "bugfix" }] } },
+            inputLabels: "bugfix,breaking-change,new-feature",
+            maximumMatchingLabels: value,
+        });
+        assert.throws(() => runAction(), /maximum_matching_labels must be a positive integer\./);
+    });
+}
+
+for (const { label, value } of [
+    { label: "empty", value: "" },
+    { label: "a single space", value: " " },
+    { label: "only whitespace", value: "            " },
+]) {
+    test(`treats ${label} maximum_matching_labels as unset and uses the default`, () => {
+        stubEvent({
+            event: { pull_request: { labels: [{ name: "bugfix" }, { name: "new-feature" }] } },
+            inputLabels: "bugfix,breaking-change,new-feature",
+            maximumMatchingLabels: value,
+        });
+        assert.doesNotThrow(() => runAction());
+    });
+}
+
+test("still throws the no-match error when no labels match, regardless of maximum_matching_labels", () => {
+    stubEvent({
+        event: { pull_request: { labels: [{ name: "documentation" }] } },
+        inputLabels: "bugfix,breaking-change,new-feature",
+        maximumMatchingLabels: "1",
+    });
+    assert.throws(() => runAction(), /No matching required labels found\./);
 });

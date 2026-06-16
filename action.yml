@@ -4,6 +4,9 @@ inputs:
   labels:
     description: 'Comma separated string of labels to look for.'
     required: true
+  maximum_matching_labels:
+    description: 'Maximum number of matching labels allowed. Defaults to the number of supplied labels.'
+    required: false
 runs:
   using: 'node24'
   main: 'action.js'
