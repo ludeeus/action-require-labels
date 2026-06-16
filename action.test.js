@@ -88,6 +88,35 @@ test("ignores empty entries in the required labels input", () => {
     assert.doesNotThrow(() => runAction());
 });
 
+test("warns when the same label is supplied multiple times in the input", () => {
+    stubEvent({
+        event: { pull_request: { labels: [{ name: "bugfix" }] } },
+        inputLabels: "bugfix,bugfix,new-feature,bugfix,new-feature",
+    });
+    const logged = [];
+    mock.method(console, "log", (msg) => logged.push(msg));
+
+    assert.doesNotThrow(() => runAction());
+
+    const warnings = logged.filter(line => typeof line === "string" && line.startsWith("::warning::"));
+    assert.equal(warnings.length, 1);
+    assert.match(warnings[0], /contains duplicate labels/);
+});
+
+test("does not warn when every supplied label is unique", () => {
+    stubEvent({
+        event: { pull_request: { labels: [{ name: "bugfix" }] } },
+        inputLabels: "bugfix,breaking-change,new-feature",
+    });
+    const logged = [];
+    mock.method(console, "log", (msg) => logged.push(msg));
+
+    assert.doesNotThrow(() => runAction());
+
+    const warnings = logged.filter(line => typeof line === "string" && line.startsWith("::warning::"));
+    assert.equal(warnings.length, 0);
+});
+
 test("throws when none of the PR labels match the required labels", () => {
     stubEvent({
         event: { pull_request: { labels: [{ name: "documentation" }, { name: "question" }] } },
