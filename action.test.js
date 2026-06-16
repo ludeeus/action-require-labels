@@ -100,7 +100,7 @@ test("warns when the same label is supplied multiple times in the input", () => 
 
     const warnings = logged.filter(line => typeof line === "string" && line.startsWith("::warning::"));
     assert.equal(warnings.length, 1);
-    assert.match(warnings[0], /Duplicate label\(s\) in the labels input \(bugfix,new-feature\)/);
+    assert.match(warnings[0], /contains duplicate labels/);
 });
 
 test("does not warn when every supplied label is unique", () => {

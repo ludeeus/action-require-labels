@@ -31,15 +31,7 @@ function runAction() {
     }
 
     if (parsedLabels.length !== requiredLabels.size) {
-        const seen = new Set()
-        const duplicates = new Set()
-        for (const label of parsedLabels) {
-            if (seen.has(label)) {
-                duplicates.add(label)
-            }
-            seen.add(label)
-        }
-        console.log(`::warning::${escapeData(`Duplicate label(s) in the labels input (${Array.from(duplicates).join(",")})`)}`)
+        console.log("::warning::The labels input contains duplicate labels.")
     }
 
     let maximumMatchingLabels = requiredLabels.size
