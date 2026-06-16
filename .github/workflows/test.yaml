@@ -22,7 +22,6 @@ jobs:
 
       - name: Run the local action
         id: require
-        continue-on-error: true
         uses: ./
         with:
           labels: >-
