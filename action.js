@@ -23,10 +23,23 @@ function runAction() {
         throw new Error("No required labels defined for the action.")
     }
 
-    const requiredLabels = new Set(inputLabels.split(",").map(label => label.trim()).filter(Boolean))
+    const parsedLabels = inputLabels.split(",").map(label => label.trim()).filter(Boolean)
+    const requiredLabels = new Set(parsedLabels)
 
     if (requiredLabels.size === 0) {
         throw new Error("No required labels defined for the action.")
+    }
+
+    if (parsedLabels.length !== requiredLabels.size) {
+        const seen = new Set()
+        const duplicates = new Set()
+        for (const label of parsedLabels) {
+            if (seen.has(label)) {
+                duplicates.add(label)
+            }
+            seen.add(label)
+        }
+        console.log(`::warning::${escapeData(`Duplicate label(s) in the labels input (${Array.from(duplicates).join(",")})`)}`)
     }
 
     let maximumMatchingLabels = requiredLabels.size
