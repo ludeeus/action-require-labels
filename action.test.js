@@ -158,6 +158,21 @@ for (const value of ["abc", "0", "-1", "1.5"]) {
     });
 }
 
+for (const { label, value } of [
+    { label: "empty", value: "" },
+    { label: "a single space", value: " " },
+    { label: "only whitespace", value: "            " },
+]) {
+    test(`treats ${label} maximum_matching_labels as unset and uses the default`, () => {
+        stubEvent({
+            event: { pull_request: { labels: [{ name: "bugfix" }, { name: "new-feature" }] } },
+            inputLabels: "bugfix,breaking-change,new-feature",
+            maximumMatchingLabels: value,
+        });
+        assert.doesNotThrow(() => runAction());
+    });
+}
+
 test("still throws the no-match error when no labels match, regardless of maximum_matching_labels", () => {
     stubEvent({
         event: { pull_request: { labels: [{ name: "documentation" }] } },

@@ -31,13 +31,12 @@ function runAction() {
 
     let maximumMatchingLabels = requiredLabels.size
 
-    const inputMaximum = process.env.INPUT_MAXIMUM_MATCHING_LABELS
-    if (inputMaximum && inputMaximum.trim() !== "") {
-        const trimmedMaximum = inputMaximum.trim()
-        if (!/^\d+$/.test(trimmedMaximum) || Number(trimmedMaximum) < 1) {
+    const inputMaximum = (process.env.INPUT_MAXIMUM_MATCHING_LABELS || "").trim()
+    if (inputMaximum) {
+        if (!/^\d+$/.test(inputMaximum) || Number(inputMaximum) < 1) {
             throw new Error("maximum_matching_labels must be a positive integer.")
         }
-        maximumMatchingLabels = Number(trimmedMaximum)
+        maximumMatchingLabels = Number(inputMaximum)
     }
 
     const prLabels = eventData.pull_request.labels.map(label => label.name)
