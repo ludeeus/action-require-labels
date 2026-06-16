@@ -26,8 +26,8 @@ jobs:
           labels: >-
             bugfix, breaking-change, new-feature, dependencies, ci, documentation, internal, refactor
 
-  run_the_action_maximum:
-    name: "Run the action (maximum)"
+  run_the_action_maximum_matching_labels:
+    name: "Run the action (maximum_matching_labels)"
     runs-on: ubuntu-slim
     steps:
       - name: Checkout
