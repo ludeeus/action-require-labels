@@ -46,3 +46,27 @@ jobs:
         run: |
           echo "::error::A blocking label is present on the pull request."
           exit 1
+
+  run_the_action_priority:
+    name: "Run the action (exactly one priority label)"
+    runs-on: ubuntu-slim
+    steps:
+      - name: Checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+
+      - name: Check the priority label
+        id: priority
+        continue-on-error: true
+        uses: ./
+        with:
+          labels: >-
+            p1, p2, p3
+
+      - name: Require exactly one priority label
+        env:
+          MATCHING_LABEL_COUNT: ${{ steps.priority.outputs.matching_label_count }}
+        run: |
+          if [ "$MATCHING_LABEL_COUNT" != "1" ]; then
+            echo "::error::only one priority label allowed"
+            exit 1
+          fi

@@ -115,6 +115,40 @@ The example below requires the pull request to have at least one **type** label 
 
 </details>
 
+### Requiring exactly one label
+
+Use the [`matching_label_count`](#matching_label_count) output to enforce an exact number of labels — for example exactly one priority label.
+
+<details>
+<summary>More details and example</summary>
+
+The action only checks that **at least one** of the listed labels is present, so on its own it cannot enforce "exactly one". Run it with `continue-on-error: true` and read the [`matching_label_count`](#matching_label_count) output in a follow-up step that fails when the count is not `1`. The `continue-on-error` is needed so the follow-up step still runs (and can read the output, which is `0`) when no priority label is present.
+
+Pass the output to the script as an environment variable rather than interpolating it directly into the `run:` block.
+
+```yaml
+    ...
+    steps:
+      - name: Check the priority label
+        id: priority
+        continue-on-error: true
+        uses: ludeeus/action-require-labels@2.0.0
+        with:
+          labels: >-
+              p1, p2, p3
+
+      - name: Require exactly one priority label
+        env:
+          MATCHING_LABEL_COUNT: ${{ steps.priority.outputs.matching_label_count }}
+        run: |
+          if [ "$MATCHING_LABEL_COUNT" != "1" ]; then
+            echo "::error::only one priority label allowed"
+            exit 1
+          fi
+```
+
+</details>
+
 ### Failing when any of the labels exist (inverted)
 
 Invert the check to fail when **any** of the listed labels are present (for example to block merging on `do-not-merge`, `wip` or `blocked`).
