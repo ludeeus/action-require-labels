@@ -1,33 +1,37 @@
 const fs = require("node:fs")
 
+// Errors the action raises intentionally for invalid configuration or input.
+// Anything that is not an ActionError is treated as an unexpected failure.
+class ActionError extends Error {}
+
 function runAction() {
     const eventPath = process.env.GITHUB_EVENT_PATH
 
     if (!eventPath || !fs.existsSync(eventPath)) {
-        throw new Error(`GITHUB_EVENT_PATH ${eventPath} does not exist`)
+        throw new ActionError(`GITHUB_EVENT_PATH ${eventPath} does not exist`)
     }
 
     const eventData = JSON.parse(fs.readFileSync(eventPath, { encoding: 'utf8' }))
 
     if (!eventData.pull_request) {
-        throw new Error("This is not a pull request.")
+        throw new ActionError("This is not a pull request.")
     }
 
     if (!eventData.pull_request.labels || eventData.pull_request.labels.length === 0) {
-        throw new Error("No labels defined on the pull request.")
+        throw new ActionError("No labels defined on the pull request.")
     }
 
     const inputLabels = process.env.INPUT_LABELS
 
     if (!inputLabels) {
-        throw new Error("No required labels defined for the action.")
+        throw new ActionError("No required labels defined for the action.")
     }
 
     const parsedLabels = inputLabels.split(",").map(label => label.trim()).filter(Boolean)
     const requiredLabels = new Set(parsedLabels)
 
     if (requiredLabels.size === 0) {
-        throw new Error("No required labels defined for the action.")
+        throw new ActionError("No required labels defined for the action.")
     }
 
     if (parsedLabels.length !== requiredLabels.size) {
@@ -39,7 +43,7 @@ function runAction() {
     const inputMaximum = (process.env.INPUT_MAXIMUM_MATCHING_LABELS || "").trim()
     if (inputMaximum) {
         if (!/^\d+$/.test(inputMaximum) || Number(inputMaximum) < 1) {
-            throw new Error("maximum_matching_labels must be a positive integer.")
+            throw new ActionError("maximum_matching_labels must be a positive integer.")
         }
         maximumMatchingLabels = Number(inputMaximum)
     }
@@ -53,11 +57,11 @@ function runAction() {
     console.log(`Found ${matchingLabels.length} matching label(s) on the pull request (${matchingLabels.join(",")})`)
 
     if (matchingLabels.length === 0) {
-        throw new Error("No matching required labels found.")
+        throw new ActionError("No matching required labels found.")
     }
 
     if (matchingLabels.length > maximumMatchingLabels) {
-        throw new Error(`Found ${matchingLabels.length} matching label(s), but a maximum of ${maximumMatchingLabels} is allowed.`)
+        throw new ActionError(`Found ${matchingLabels.length} matching label(s), but a maximum of ${maximumMatchingLabels} is allowed.`)
     }
 }
 
@@ -71,9 +75,14 @@ if (require.main === module) {
     try {
         runAction()
     } catch (err) {
-        console.log(`::error::${escapeData(err.message || err.toString())}`)
+        if (err instanceof ActionError) {
+            console.log(`::error::${escapeData(err.message)}`)
+        } else {
+            console.log(err)
+            console.log("::error::Unknown error")
+        }
         process.exitCode = 1
     }
 }
 
-module.exports = { runAction }
+module.exports = { runAction, ActionError }
