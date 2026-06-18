@@ -2,7 +2,7 @@ const { test, mock, afterEach } = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 
-const { runAction } = require("./action.js");
+const { runAction, logMessage } = require("./action.js");
 
 // Stubs the filesystem and environment that runAction reads. Nothing here
 // touches the real filesystem (fs is mocked) and the env values are
@@ -209,4 +209,48 @@ test("still throws the no-match error when no labels match, regardless of maximu
         maximumMatchingLabels: "1",
     });
     assert.throws(() => runAction(), /No matching required labels found\./);
+});
+
+function captureLog() {
+    const logged = [];
+    mock.method(console, "log", (msg) => logged.push(msg));
+    return logged;
+}
+
+test("logMessage defaults to debug severity when no options are given", () => {
+    const logged = captureLog();
+    logMessage("hello");
+    assert.deepEqual(logged, ["::debug::hello"]);
+});
+
+test("logMessage defaults to debug severity when severity is omitted", () => {
+    const logged = captureLog();
+    logMessage("hello", {});
+    assert.deepEqual(logged, ["::debug::hello"]);
+});
+
+test("logMessage prints info as plain output without a prefix", () => {
+    const logged = captureLog();
+    logMessage("hello", { severity: "info" });
+    assert.deepEqual(logged, ["hello"]);
+});
+
+for (const severity of ["notice", "warning", "error"]) {
+    test(`logMessage emits the ${severity} workflow command`, () => {
+        const logged = captureLog();
+        logMessage("hello", { severity });
+        assert.deepEqual(logged, [`::${severity}::hello`]);
+    });
+}
+
+test("logMessage escapes workflow-command messages so they stay on one line", () => {
+    const logged = captureLog();
+    logMessage("100% done\r\nnext", { severity: "error" });
+    assert.deepEqual(logged, ["::error::100%25 done%0D%0Anext"]);
+});
+
+test("logMessage leaves info messages unescaped", () => {
+    const logged = captureLog();
+    logMessage("100% done\nnext", { severity: "info" });
+    assert.deepEqual(logged, ["100% done\nnext"]);
 });
