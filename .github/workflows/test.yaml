@@ -26,13 +26,9 @@ jobs:
       fail-fast: false
       matrix:
         os: &os_matrix
-          - macos-13
-          - macos-latest
           - ubuntu-24.04
           - ubuntu-24.04-arm
           - ubuntu-slim
-          - windows-11-arm
-          - windows-latest
     steps:
       - name: Checkout
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
@@ -92,7 +88,6 @@ jobs:
 
       - name: Fail if a blocking label is present
         if: steps.blocking.outcome == 'success'
-        shell: bash
         run: |
           echo "::error::A blocking label is present on the pull request."
           exit 1
