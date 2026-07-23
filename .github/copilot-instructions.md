@@ -26,9 +26,9 @@ no GitHub API calls, no token — so it runs under `permissions: {}`.
 - **Escape untrusted output.** Any label-derived (user-controlled) string that
   is printed as part of a workflow command (`::error::`, `::warning::`) must go
   through `escapeData()` to prevent workflow-command injection.
-- **Report failure via exit code**, not thrown exceptions: print
-  `::error::<message>` and set `process.exitCode = 1`. The action has no
-  outputs.
+- **Report failure via exit code**: errors may be thrown inside `runAction()`, but must be
+  caught in the entrypoint which prints `::error::<message>` and sets `process.exitCode = 1`.
+  The action has no outputs.
 - **Node 24 / CommonJS.** Match the declared runtime in `action.yml`; use
   `require()`, not ESM imports.
 - **Keep comments to a minimum.** The code should be self-explanatory; only
