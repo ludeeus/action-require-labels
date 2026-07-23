@@ -61,13 +61,13 @@ test("throws when the event is not a pull request", () => {
 });
 
 test("throws when the pull request has no labels property", () => {
-    stubEvent({ event: { pull_request: {} } });
-    assert.throws(() => runAction(), /No labels defined on the pull request\./);
+    stubEvent({ event: { pull_request: {} }, inputLabels: "bugfix,new-feature" });
+    assert.throws(() => runAction(), /No labels defined on the pull request\. Required labels: bugfix, new-feature\./);
 });
 
 test("throws when the pull request has an empty labels array", () => {
-    stubEvent({ event: { pull_request: { labels: [] } } });
-    assert.throws(() => runAction(), /No labels defined on the pull request\./);
+    stubEvent({ event: { pull_request: { labels: [] } }, inputLabels: "bugfix,new-feature" });
+    assert.throws(() => runAction(), /No labels defined on the pull request\. Required labels: bugfix, new-feature\./);
 });
 
 test("throws when no required labels are defined for the action", () => {
@@ -122,7 +122,7 @@ test("throws when none of the PR labels match the required labels", () => {
         event: { pull_request: { labels: [{ name: "documentation" }, { name: "question" }] } },
         inputLabels: "bugfix,breaking-change,new-feature",
     });
-    assert.throws(() => runAction(), /No matching required labels found\./);
+    assert.throws(() => runAction(), /No matching required labels found\. Required labels: bugfix, breaking-change, new-feature\./);
 });
 
 test("succeeds when at least one PR label matches a required label", () => {
@@ -208,5 +208,5 @@ test("still throws the no-match error when no labels match, regardless of maximu
         inputLabels: "bugfix,breaking-change,new-feature",
         maximumMatchingLabels: "1",
     });
-    assert.throws(() => runAction(), /No matching required labels found\./);
+    assert.throws(() => runAction(), /No matching required labels found\. Required labels: bugfix, breaking-change, new-feature\./);
 });
