@@ -117,6 +117,21 @@ test("does not warn when every supplied label is unique", () => {
     assert.equal(warnings.length, 0);
 });
 
+test("escapes workflow-command characters in label names before logging", () => {
+    stubEvent({
+        event: { pull_request: { labels: [{ name: "50%-done" }] } },
+        inputLabels: "50%-done",
+    });
+    const logged = [];
+    mock.method(console, "log", (msg) => logged.push(msg));
+
+    assert.doesNotThrow(() => runAction());
+
+    const labelLines = logged.filter(line => typeof line === "string" && line.includes("50%25-done"));
+    assert.equal(labelLines.length, 3);
+    assert.ok(!logged.some(line => typeof line === "string" && line.includes("50%-done")));
+});
+
 test("throws when none of the PR labels match the required labels", () => {
     stubEvent({
         event: { pull_request: { labels: [{ name: "documentation" }, { name: "question" }] } },
