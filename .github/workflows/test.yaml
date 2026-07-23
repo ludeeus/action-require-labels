@@ -12,11 +12,16 @@ on:
 
 permissions: {}
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   run_the_action:
     name: "Run the action (${{ matrix.os }})"
     if: github.event.pull_request.labels[0] != null
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 5
     strategy:
       fail-fast: false
       matrix:
@@ -44,6 +49,7 @@ jobs:
     name: "Run the action (maximum_matching_labels, ${{ matrix.os }})"
     if: github.event.pull_request.labels[0] != null
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 5
     strategy:
       fail-fast: false
       matrix:
@@ -72,6 +78,7 @@ jobs:
     name: "Run the action (inverted, ${{ matrix.os }})"
     if: github.event.pull_request.labels[0] != null
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 5
     strategy:
       fail-fast: false
       matrix:
