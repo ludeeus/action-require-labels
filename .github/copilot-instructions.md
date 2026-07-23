@@ -58,7 +58,7 @@ This is exactly what CI runs. Tests mock `node:fs` and set env vars via the
 - Every PR must carry exactly one change-type label (enforced by the action
   itself in `test.yaml`): `bugfix`, `breaking-change`, `new-feature`,
   `dependencies`, `ci`, `documentation`, `internal`, or `refactor`.
-- These labels drive auto-generated release notes (`.github/release.yml`).
+- A subset of these labels is used to categorize auto-generated release notes (`.github/release.yml`).
 - Releases are SemVer git tags (e.g. `2.0.0`), referenced in the README as
   `ludeeus/action-require-labels@<version>`.
 
