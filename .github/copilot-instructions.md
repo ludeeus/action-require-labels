@@ -37,8 +37,12 @@ no GitHub API calls, no token — so it runs under `permissions: {}`.
   detail.
 - **Node 24 / CommonJS.** Match the declared runtime in `action.yml`; use
   `require()`, not ESM imports.
-- **Keep comments to a minimum.** The code should be self-explanatory; only
-  comment what the code cannot express.
+- **Keep comments in code to a minimum.** Self-explanatory code carries no
+  comment — do not restate what a name, type, or control-flow structure already
+  makes clear. Reserve comments for rationale the code genuinely cannot convey,
+  such as a reference to an external specification. If code needs a comment to
+  be understood, prefer clarifying the code (names, extracted helpers) over
+  adding the comment.
 
 ## Code style
 
