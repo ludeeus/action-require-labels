@@ -58,11 +58,14 @@ const resolveMaximumMatchingLabelsCount = (defaultValue) => {
     if (!input) {
         return defaultValue
     }
-    if (!/^\d+$/.test(input) || Number(input) < 1) {
+    if (!/^\d+$/.test(input)) {
         throw new Error("maximum_matching_labels must be a positive integer.")
     }
-    return Number(input)
-}
+    const maximum = Number(input)
+    if (!Number.isSafeInteger(maximum) || maximum < 1) {
+        throw new Error("maximum_matching_labels must be a positive integer.")
+    }
+    return maximum
 
 // Workflow command data must stay on a single line; see
 // https://docs.github.com/actions/reference/workflow-commands-for-github-actions
