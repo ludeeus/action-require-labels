@@ -5,36 +5,7 @@ const fs = require("node:fs")
 class ActionError extends Error {}
 
 const runAction = () => {
-    const eventPath = process.env.GITHUB_EVENT_PATH
-
-    if (!eventPath || !fs.existsSync(eventPath)) {
-        throw new ActionError(`GITHUB_EVENT_PATH ${eventPath} does not exist`)
-    }
-
-    const eventData = JSON.parse(fs.readFileSync(eventPath, { encoding: 'utf8' }))
-
-    if (!eventData.pull_request) {
-        throw new ActionError("This is not a pull request.")
-    }
-
-    const inputLabels = process.env.INPUT_LABELS
-
-    if (!inputLabels) {
-        throw new ActionError("No required labels defined for the action.")
-    }
-
-    const parsedLabels = inputLabels.split(",").map(label => label.trim()).filter(Boolean)
-    const requiredLabels = new Set(parsedLabels)
-
-    if (requiredLabels.size === 0) {
-        throw new ActionError("No required labels defined for the action.")
-    }
-
-    if (parsedLabels.length !== requiredLabels.size) {
-        console.log("::warning::The labels input contains duplicate labels.")
-    }
-
-    const maximumMatchingLabels = resolveMaximumMatchingLabelsCount(requiredLabels.size)
+    const { eventData, requiredLabels, maximumMatchingLabels } = resolveConfiguration()
 
     if (!eventData.pull_request.labels || eventData.pull_request.labels.length === 0) {
         throw new ActionError(`No labels defined on the pull request. Required labels: ${Array.from(requiredLabels).join(", ")}.`)
@@ -55,6 +26,46 @@ const runAction = () => {
     if (matchingLabels.length > maximumMatchingLabels) {
         throw new ActionError(`Found ${matchingLabels.length} matching label(s), but a maximum of ${maximumMatchingLabels} is allowed.`)
     }
+}
+
+const resolveConfiguration = () => {
+    const eventPath = process.env.GITHUB_EVENT_PATH
+
+    if (!eventPath || !fs.existsSync(eventPath)) {
+        throw new ActionError(`GITHUB_EVENT_PATH ${eventPath} does not exist`)
+    }
+
+    const eventData = JSON.parse(fs.readFileSync(eventPath, { encoding: 'utf8' }))
+
+    if (!eventData.pull_request) {
+        throw new ActionError("This is not a pull request.")
+    }
+
+    const requiredLabels = resolveRequiredLabels()
+    const maximumMatchingLabels = resolveMaximumMatchingLabelsCount(requiredLabels.size)
+
+    return { eventData, requiredLabels, maximumMatchingLabels }
+}
+
+const resolveRequiredLabels = () => {
+    const inputLabels = process.env.INPUT_LABELS
+
+    if (!inputLabels) {
+        throw new ActionError("No required labels defined for the action.")
+    }
+
+    const parsedLabels = inputLabels.split(",").map(label => label.trim()).filter(Boolean)
+    const requiredLabels = new Set(parsedLabels)
+
+    if (requiredLabels.size === 0) {
+        throw new ActionError("No required labels defined for the action.")
+    }
+
+    if (parsedLabels.length !== requiredLabels.size) {
+        console.log("::warning::The labels input contains duplicate labels.")
+    }
+
+    return requiredLabels
 }
 
 const resolveMaximumMatchingLabelsCount = (defaultValue) => {
