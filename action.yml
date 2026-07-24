@@ -4,8 +4,8 @@ inputs:
   labels:
     description: 'Comma separated string of labels to look for.'
     required: true
-  maximum_matching_labels:
-    description: 'Maximum number of matching labels allowed. Defaults to the number of supplied labels.'
+  require:
+    description: "How many of the labels must be present: 'any' (default, at least one), 'none', an exact count (e.g. '1'), or a comparison ('<=2', '>=2')."
     required: false
 runs:
   using: 'node24'
