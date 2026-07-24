@@ -61,13 +61,13 @@ test("throws when the event is not a pull request", () => {
 });
 
 test("throws when the pull request has no labels property", () => {
-    stubEvent({ event: { pull_request: {} } });
-    assert.throws(() => runAction(), /No labels defined on the pull request\./);
+    stubEvent({ event: { pull_request: {} }, inputLabels: "bugfix,new-feature" });
+    assert.throws(() => runAction(), /No labels defined on the pull request\. Required labels: bugfix, new-feature\./);
 });
 
 test("throws when the pull request has an empty labels array", () => {
-    stubEvent({ event: { pull_request: { labels: [] } } });
-    assert.throws(() => runAction(), /No labels defined on the pull request\./);
+    stubEvent({ event: { pull_request: { labels: [] } }, inputLabels: "bugfix,new-feature" });
+    assert.throws(() => runAction(), /No labels defined on the pull request\. Required labels: bugfix, new-feature\./);
 });
 
 test("throws when no required labels are defined for the action", () => {
@@ -117,12 +117,28 @@ test("does not warn when every supplied label is unique", () => {
     assert.equal(warnings.length, 0);
 });
 
+test("escapes workflow-command characters in label names before logging", () => {
+    stubEvent({
+        event: { pull_request: { labels: [{ name: "50%-done\r\n::error::injected" }] } },
+        inputLabels: "50%-done\r\n::error::injected",
+    });
+    const logged = [];
+    mock.method(console, "log", (msg) => logged.push(msg));
+
+    assert.doesNotThrow(() => runAction());
+
+    const escaped = "50%25-done%0D%0A::error::injected";
+    const labelLines = logged.filter(line => typeof line === "string" && line.includes(escaped));
+    assert.equal(labelLines.length, 3);
+    assert.ok(!logged.some(line => typeof line === "string" && /[\r\n]/.test(line)));
+});
+
 test("throws when none of the PR labels match the required labels", () => {
     stubEvent({
         event: { pull_request: { labels: [{ name: "documentation" }, { name: "question" }] } },
         inputLabels: "bugfix,breaking-change,new-feature",
     });
-    assert.throws(() => runAction(), /No matching required labels found\./);
+    assert.throws(() => runAction(), /No matching required labels found\. Required labels: bugfix, breaking-change, new-feature\./);
 });
 
 test("failures raised by the action are ActionError instances", () => {
@@ -208,6 +224,20 @@ for (const value of ["abc", "0", "-1", "1.5"]) {
 }
 
 for (const { label, value } of [
+    { label: "a digit string that overflows to Infinity", value: "9".repeat(400) },
+    { label: "a value above Number.MAX_SAFE_INTEGER", value: "9007199254740992" },
+]) {
+    test(`throws when maximum_matching_labels is ${label}`, () => {
+        stubEvent({
+            event: { pull_request: { labels: [{ name: "bugfix" }] } },
+            inputLabels: "bugfix,breaking-change,new-feature",
+            maximumMatchingLabels: value,
+        });
+        assert.throws(() => runAction(), /maximum_matching_labels must be a positive integer\./);
+    });
+}
+
+for (const { label, value } of [
     { label: "empty", value: "" },
     { label: "a single space", value: " " },
     { label: "only whitespace", value: "            " },
@@ -228,5 +258,5 @@ test("still throws the no-match error when no labels match, regardless of maximu
         inputLabels: "bugfix,breaking-change,new-feature",
         maximumMatchingLabels: "1",
     });
-    assert.throws(() => runAction(), /No matching required labels found\./);
+    assert.throws(() => runAction(), /No matching required labels found\. Required labels: bugfix, breaking-change, new-feature\./);
 });

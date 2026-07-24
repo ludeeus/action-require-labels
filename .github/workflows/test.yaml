@@ -12,13 +12,28 @@ on:
 
 permissions: {}
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   run_the_action:
-    name: "Run the action"
-    runs-on: ubuntu-slim
+    name: "Run the action (${{ matrix.os }})"
+    if: github.event.pull_request.labels[0] != null
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        os: &os_matrix
+          - ubuntu-24.04
+          - ubuntu-24.04-arm
+          - ubuntu-slim
     steps:
       - name: Checkout
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
 
       - name: Run the local action
         uses: ./
@@ -27,11 +42,19 @@ jobs:
             bugfix, breaking-change, new-feature, dependencies, ci, documentation, internal, refactor
 
   run_the_action_maximum_matching_labels:
-    name: "Run the action (maximum_matching_labels)"
-    runs-on: ubuntu-slim
+    name: "Run the action (maximum_matching_labels, ${{ matrix.os }})"
+    if: github.event.pull_request.labels[0] != null
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        os: *os_matrix
     steps:
       - name: Checkout
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
 
       - name: Run the local action
         uses: ./
@@ -41,11 +64,19 @@ jobs:
           maximum_matching_labels: 1
 
   run_the_action_inverted:
-    name: "Run the action (inverted)"
-    runs-on: ubuntu-slim
+    name: "Run the action (inverted, ${{ matrix.os }})"
+    if: github.event.pull_request.labels[0] != null
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        os: *os_matrix
     steps:
       - name: Checkout
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
 
       - name: Run the local action
         id: blocking
