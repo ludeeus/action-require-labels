@@ -2,7 +2,7 @@ const { test, mock, afterEach } = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 
-const { runAction } = require("./action.js");
+const { runAction, ActionError } = require("./action.js");
 
 // Stubs the filesystem and environment that runAction reads. Nothing here
 // touches the real filesystem (fs is mocked) and the env values are
@@ -117,12 +117,53 @@ test("does not warn when every supplied label is unique", () => {
     assert.equal(warnings.length, 0);
 });
 
+test("escapes workflow-command characters in label names before logging", () => {
+    stubEvent({
+        event: { pull_request: { labels: [{ name: "50%-done\r\n::error::injected" }] } },
+        inputLabels: "50%-done\r\n::error::injected",
+    });
+    const logged = [];
+    mock.method(console, "log", (msg) => logged.push(msg));
+
+    assert.doesNotThrow(() => runAction());
+
+    const escaped = "50%25-done%0D%0A::error::injected";
+    const labelLines = logged.filter(line => typeof line === "string" && line.includes(escaped));
+    assert.equal(labelLines.length, 3);
+    assert.ok(!logged.some(line => typeof line === "string" && /[\r\n]/.test(line)));
+});
+
 test("throws when none of the PR labels match the required labels", () => {
     stubEvent({
         event: { pull_request: { labels: [{ name: "documentation" }, { name: "question" }] } },
         inputLabels: "bugfix,breaking-change,new-feature",
     });
     assert.throws(() => runAction(), /No matching required labels found\. Required labels: bugfix, breaking-change, new-feature\./);
+});
+
+test("failures raised by the action are ActionError instances", () => {
+    stubEvent({ event: { push: {} } });
+    assert.throws(() => runAction(), ActionError);
+});
+
+test("throws a non-ActionError when the event file is not valid JSON", () => {
+    // Set up the fs mocks directly (rather than via stubEvent) so readFileSync
+    // is mocked exactly once with the malformed payload.
+    mock.method(fs, "existsSync", () => true);
+    mock.method(fs, "readFileSync", () => "{ not json");
+    process.env.GITHUB_EVENT_PATH = "/mock/event.json";
+    process.env.INPUT_LABELS = "bugfix";
+
+    assert.throws(() => runAction(), (err) => err instanceof SyntaxError && !(err instanceof ActionError));
+});
+
+test("the maximum_matching_labels limit failure is an ActionError", () => {
+    stubEvent({
+        event: { pull_request: { labels: [{ name: "bugfix" }, { name: "new-feature" }] } },
+        inputLabels: "bugfix,breaking-change,new-feature",
+        maximumMatchingLabels: "1",
+    });
+    assert.throws(() => runAction(), ActionError);
 });
 
 test("succeeds when at least one PR label matches a required label", () => {
@@ -178,6 +219,20 @@ test("passes with maximum_matching_labels of 1 when exactly one label matches", 
 
 for (const value of ["abc", "0", "-1", "1.5"]) {
     test(`throws when maximum_matching_labels is "${value}"`, () => {
+        stubEvent({
+            event: { pull_request: { labels: [{ name: "bugfix" }] } },
+            inputLabels: "bugfix,breaking-change,new-feature",
+            maximumMatchingLabels: value,
+        });
+        assert.throws(() => runAction(), /maximum_matching_labels must be a positive integer\./);
+    });
+}
+
+for (const { label, value } of [
+    { label: "a digit string that overflows to Infinity", value: "9".repeat(400) },
+    { label: "a value above Number.MAX_SAFE_INTEGER", value: "9007199254740992" },
+]) {
+    test(`throws when maximum_matching_labels is ${label}`, () => {
         stubEvent({
             event: { pull_request: { labels: [{ name: "bugfix" }] } },
             inputLabels: "bugfix,breaking-change,new-feature",
