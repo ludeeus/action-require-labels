@@ -37,12 +37,15 @@ no GitHub API calls, no token — so it runs under `permissions: {}`.
   detail.
 - **Node 24 / CommonJS.** Match the declared runtime in `action.yml`; use
   `require()`, not ESM imports.
-- **Keep comments in code to a minimum.** Self-explanatory code carries no
-  comment — do not restate what a name, type, or control-flow structure already
-  makes clear. Reserve comments for rationale the code genuinely cannot convey,
-  such as a reference to an external specification. If code needs a comment to
-  be understood, prefer clarifying the code (names, extracted helpers) over
-  adding the comment.
+- **Comments are the exception, not the default.** Do not comment what names,
+  types, and control flow already make clear — delete such comments instead of
+  writing them, and fix unclear code by renaming or extracting a helper, not by
+  annotating it. A comment is justified only to capture what the code cannot: a
+  reference to an external specification, or the non-obvious *why* behind a
+  deliberate choice. Never comment the *what* or the *how*. When in doubt, leave
+  it out. This does not license removing required annotations — e.g. the
+  `# vX.Y.Z` tag on a pinned action SHA (see Workflow / CI conventions) or the
+  workflow-command reference in `escapeData()`.
 
 ## Code style
 
