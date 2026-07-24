@@ -14,7 +14,7 @@ function stubEvent(opts = {}) {
     const exists = "exists" in opts ? opts.exists : true;
     const eventPath = "eventPath" in opts ? opts.eventPath : "/mock/event.json";
     const inputLabels = "inputLabels" in opts ? opts.inputLabels : "bugfix";
-    const require = "require" in opts ? opts.require : undefined;
+    const requireInput = "require" in opts ? opts.require : undefined;
 
     mock.method(fs, "existsSync", () => exists);
     mock.method(fs, "readFileSync", () => JSON.stringify(event));
@@ -31,10 +31,10 @@ function stubEvent(opts = {}) {
         process.env.INPUT_LABELS = inputLabels;
     }
 
-    if (require === undefined) {
+    if (requireInput === undefined) {
         delete process.env.INPUT_REQUIRE;
     } else {
-        process.env.INPUT_REQUIRE = require;
+        process.env.INPUT_REQUIRE = requireInput;
     }
 }
 
