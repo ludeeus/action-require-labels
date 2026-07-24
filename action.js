@@ -1,5 +1,7 @@
 const fs = require("node:fs")
 
+// Errors the action raises intentionally for invalid configuration or input.
+// Anything that is not an ActionError is treated as an unexpected failure.
 class ActionError extends Error {}
 
 function runAction() {
@@ -70,6 +72,8 @@ const resolveMaximumMatchingLabelsCount = (defaultValue) => {
     return maximum
 }
 
+// Workflow command data must stay on a single line; see
+// https://docs.github.com/actions/reference/workflow-commands-for-github-actions
 function escapeData(data) {
     return data.replace(/%/g, "%25").replace(/\r/g, "%0D").replace(/\n/g, "%0A")
 }
