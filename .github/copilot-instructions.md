@@ -31,7 +31,7 @@ no GitHub API calls, no token — so it runs under `permissions: {}`.
   instances inside `runAction()` — the `ActionError` class is defined in
   `action.js` and exported alongside `runAction`. The entrypoint catches
   everything and sets `process.exitCode = 1`; the action has no outputs. For an
-  `ActionError` it prints the escaped message via `::error::${escapeData(message)}`;
+  `ActionError` it prints the escaped message via `::error::${escapeData(err.message)}`;
   for any other (unexpected) error it deliberately prints a generic
   `::error::Unknown error`, withholding the message rather than leaking internal
   detail.
