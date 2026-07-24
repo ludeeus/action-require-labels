@@ -6,7 +6,7 @@ It is made for maintainers who want to enforce a labeling policy on pull request
 
 - Requiring a change-type label (like `bugfix` or `new-feature`) so generated release notes and changelogs stay accurate.
 - Requiring a triage or size label before a pull request can be reviewed.
-- Blocking merges while labels like `do-not-merge` or `wip` are present (see [inverted usage](#failing-when-any-of-the-labels-exist-inverted)).
+- Blocking merges while labels like `do-not-merge` or `wip` are present (see [`require: none`](#failing-when-any-of-the-labels-exist)).
 
 Add the check as a required status check on your branch to make the labels mandatory before merge.
 
@@ -14,11 +14,11 @@ Add the check as a required status check on your branch to make the labels manda
 
 - **No token, no API calls** — labels are read straight from the workflow event payload, so the action runs with `permissions: {}`.
 - **Zero dependencies** — the entire action is a single small script ([action.js](action.js)) you can audit in one read, with no third-party packages.
-- **Composable** — match any of several labels in one step, combine steps to require [one label from each set](#requiring-one-label-from-each-of-multiple-sets), or [invert the check](#failing-when-any-of-the-labels-exist-inverted) to block labels.
+- **Composable** — match any of several labels in one step, combine steps to require [one label from each set](#requiring-one-label-from-each-of-multiple-sets), or [block labels](#failing-when-any-of-the-labels-exist) with `require: none`.
 
 ## How it works
 
-The action reads the pull request labels from the event payload and succeeds when at least one of the configured labels is present.
+The action reads the pull request labels from the event payload and, by default, succeeds when at least one of the configured labels is present. The [`require`](#require) input changes *how many* of the labels must be present — from "at least one" (the default) to "none", an exact count, or a comparison.
 
 - It only works on `pull_request` events; it fails on any other event.
 - It runs on Node 24, so the runner needs to support the `node24` action runtime.
@@ -29,29 +29,37 @@ The action reads the pull request labels from the event payload and succeeds whe
 
 **Required** Comma separated string of labels to look for.
 
-The check passes when the pull request has **at least one** of the listed labels (OR matching), not all of them. For example, with `bugfix, breaking-change, new-feature`, a pull request labeled with any single one of those passes. It fails only when none of the listed labels are present.
+By default the check passes when the pull request has **at least one** of the listed labels (OR matching), not all of them. For example, with `bugfix, breaking-change, new-feature`, a pull request labeled with any single one of those passes. Use [`require`](#require) to change how many must be present.
 
 Labels are matched against the pull request labels exactly, including casing. Whitespace around each comma-separated entry is ignored. Supplying the same label more than once has no effect on matching, but logs a warning so the duplicates can be cleaned up.
 
-### `maximum_matching_labels`
+### `require`
 
-**Optional** Maximum number of matching labels allowed on the pull request.
+**Optional** How many of the [`labels`](#labels) must be present on the pull request. Defaults to `any`.
 
-The check fails when **more than** this many of the listed labels are present. It defaults to the number of labels supplied in [`labels`](#labels), so it is a no-op unless you set it to a lower value. Combined with the default "at least one" rule, setting it to `1` enforces **exactly one** matching label.
+| Value | Meaning |
+| --- | --- |
+| `any` (default) | **At least one** of the labels must be present. |
+| `none` | **None** of the labels may be present — the check fails if any are (see [blocking](#failing-when-any-of-the-labels-exist)). |
+| `<N>` (e.g. `1`) | **Exactly** `N` of the labels must be present. `1` enforces exactly one. |
+| `<=N` (e.g. `<=2`) | **At most** `N` of the labels may be present (zero is allowed). |
+| `>=N` (e.g. `>=2`) | **At least** `N` of the labels must be present. |
 
-It must be a positive integer.
+The keywords are case-insensitive and surrounding whitespace is ignored. Numbers must be non-negative integers.
+
+> [!NOTE]
+> In YAML a value that starts with `>` is a block-scalar indicator, so `>=N` must be quoted: `require: '>=2'`. `<=N`, plain numbers, and the keywords need no quoting.
 
 ## Behavior
 
 The result is communicated through the step's success or failure; the action has no outputs.
 
-The step **passes** when the pull request has at least one of the configured labels.
+The step **passes** when the number of configured labels present on the pull request satisfies [`require`](#require) (by default, at least one).
 
 The step **fails** when:
 
-- The pull request has none of the configured labels.
-- The pull request has more matching labels than [`maximum_matching_labels`](#maximum_matching_labels) allows.
-- The pull request has no labels at all.
+- Fewer configured labels are present than [`require`](#require) demands (for the default `any`, that means none are present — including when the pull request has no labels at all).
+- More configured labels are present than [`require`](#require) allows (for example any are present when `require: none`).
 - The workflow was not triggered by a `pull_request` event.
 
 ## Example usage
@@ -118,12 +126,12 @@ The example below requires the pull request to have at least one **type** label 
 
 ### Requiring exactly one label
 
-Use [`maximum_matching_labels`](#maximum_matching_labels) to require **exactly one** of the listed labels — for example exactly one priority label.
+Use [`require: 1`](#require) to require **exactly one** of the listed labels — for example exactly one priority label.
 
 <details>
 <summary>More details and example</summary>
 
-The action already requires **at least one** of the listed labels. Setting `maximum_matching_labels: 1` adds the upper bound, so the step passes only when exactly one of the labels is present.
+`require: 1` makes the step pass only when exactly one of the labels is present — it fails both when none are present and when two or more are.
 
 ```yaml
     ...
@@ -133,38 +141,29 @@ The action already requires **at least one** of the listed labels. Setting `maxi
         with:
           labels: >-
               p1, p2, p3
-          maximum_matching_labels: 1
+          require: 1
 ```
 
 </details>
 
-### Failing when any of the labels exist (inverted)
+### Failing when any of the labels exist
 
-Invert the check to fail when **any** of the listed labels are present (for example to block merging on `do-not-merge`, `wip` or `blocked`).
+Use [`require: none`](#require) to fail when **any** of the listed labels are present — for example to block merging on `do-not-merge`, `wip` or `blocked`.
 
 <details>
 <summary>More details and example</summary>
 
-The action passes when the pull request has **at least one** of the listed labels. To invert this — failing when **any** of the labels are present (for example to block merging on `do-not-merge`, `wip` or `blocked`) — run the action with `continue-on-error: true` to capture its outcome, then fail a follow-up step when that outcome was `success`.
-
-When the pull request has no labels at all, the action exits with a failure, so the inverted check correctly passes (no blocking label is present).
+With `require: none` the step fails as soon as one of the listed labels is present, and passes when none are (including when the pull request has no labels at all). No `continue-on-error` or follow-up step is needed.
 
 ```yaml
     ...
     steps:
-      - name: Check for blocking labels
-        id: blocking
-        continue-on-error: true
+      - name: Block on merge-blocking labels
         uses: ludeeus/action-require-labels@2.0.0
         with:
           labels: >-
               do-not-merge, wip, blocked
-
-      - name: Fail if a blocking label is present
-        if: steps.blocking.outcome == 'success'
-        run: |
-          echo "::error::A blocking label is present on the pull request."
-          exit 1
+          require: none
 ```
 
 </details>

@@ -20,56 +20,69 @@ const runAction = () => {
     const inputLabels = process.env.INPUT_LABELS
 
     if (!inputLabels) {
-        throw new ActionError("No required labels defined for the action.")
+        throw new ActionError("No labels defined for the action.")
     }
 
     const parsedLabels = inputLabels.split(",").map(label => label.trim()).filter(Boolean)
-    const requiredLabels = new Set(parsedLabels)
+    const labels = new Set(parsedLabels)
 
-    if (requiredLabels.size === 0) {
-        throw new ActionError("No required labels defined for the action.")
+    if (labels.size === 0) {
+        throw new ActionError("No labels defined for the action.")
     }
 
-    if (parsedLabels.length !== requiredLabels.size) {
+    if (parsedLabels.length !== labels.size) {
         console.log("::warning::The labels input contains duplicate labels.")
     }
 
-    const maximumMatchingLabels = resolveMaximumMatchingLabelsCount(requiredLabels.size)
+    const constraint = resolveRequireConstraint()
 
-    if (!eventData.pull_request.labels || eventData.pull_request.labels.length === 0) {
-        throw new ActionError(`No labels defined on the pull request. Required labels: ${Array.from(requiredLabels).join(", ")}.`)
-    }
+    const prLabels = (eventData.pull_request.labels || []).map(label => label.name)
 
-    const prLabels = eventData.pull_request.labels.map(label => label.name)
-
-    console.log(`Required labels (${escapeData(Array.from(requiredLabels).join(", "))})`)
+    console.log(`Labels (${escapeData(Array.from(labels).join(", "))})`)
     console.log(`Pull request labels (${escapeData(prLabels.join(", "))})`)
 
-    const matchingLabels = prLabels.filter(label => requiredLabels.has(label))
-    console.log(`Found ${matchingLabels.length} matching label(s) on the pull request (${escapeData(matchingLabels.join(", "))})`)
-
-    if (matchingLabels.length === 0) {
-        throw new ActionError(`No matching required labels found. Required labels: ${Array.from(requiredLabels).join(", ")}.`)
-    }
-
-    if (matchingLabels.length > maximumMatchingLabels) {
-        throw new ActionError(`Found ${matchingLabels.length} matching label(s), but a maximum of ${maximumMatchingLabels} is allowed.`)
-    }
+    checkMatchingLabelCount(labels, prLabels, constraint)
 }
 
-const resolveMaximumMatchingLabelsCount = (defaultValue) => {
-    const input = (process.env.INPUT_MAXIMUM_MATCHING_LABELS || "").trim()
-    if (!input) {
-        return defaultValue
+const resolveRequireConstraint = () => {
+    const input = (process.env.INPUT_REQUIRE || "").trim().toLowerCase()
+    if (!input || input === "any") {
+        return { minimum: 1, maximum: Infinity }
     }
-    if (!/^\d+$/.test(input)) {
-        throw new ActionError("maximum_matching_labels must be a positive integer.")
+    if (input === "none") {
+        return { minimum: 0, maximum: 0 }
     }
-    const maximum = Number(input)
-    if (!Number.isSafeInteger(maximum) || maximum < 1) {
-        throw new ActionError("maximum_matching_labels must be a positive integer.")
+
+    const comparison = /^(<=|>=)?(\d+)$/.exec(input)
+    if (!comparison) {
+        throw new ActionError("require must be 'any', 'none', a non-negative integer, or a '<=' / '>=' comparison (e.g. '<=2').")
     }
-    return maximum
+
+    const count = Number(comparison[2])
+    if (!Number.isSafeInteger(count)) {
+        throw new ActionError("require must be 'any', 'none', a non-negative integer, or a '<=' / '>=' comparison (e.g. '<=2').")
+    }
+
+    if (comparison[1] === "<=") {
+        return { minimum: 0, maximum: count }
+    }
+    if (comparison[1] === ">=") {
+        return { minimum: count, maximum: Infinity }
+    }
+    return { minimum: count, maximum: count }
+}
+
+const checkMatchingLabelCount = (labels, prLabels, { minimum, maximum }) => {
+    const matchingLabels = prLabels.filter(label => labels.has(label))
+    console.log(`Found ${matchingLabels.length} matching label(s) on the pull request (${escapeData(matchingLabels.join(", "))})`)
+
+    if (matchingLabels.length < minimum) {
+        throw new ActionError(`Found ${matchingLabels.length} matching label(s) on the pull request, but at least ${minimum} of the configured label(s) is required (${Array.from(labels).join(", ")}).`)
+    }
+
+    if (matchingLabels.length > maximum) {
+        throw new ActionError(`Found ${matchingLabels.length} matching label(s) on the pull request (${matchingLabels.join(", ")}), but at most ${maximum} is allowed.`)
+    }
 }
 
 // Workflow command data must stay on a single line; see

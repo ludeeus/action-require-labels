@@ -14,7 +14,7 @@ function stubEvent(opts = {}) {
     const exists = "exists" in opts ? opts.exists : true;
     const eventPath = "eventPath" in opts ? opts.eventPath : "/mock/event.json";
     const inputLabels = "inputLabels" in opts ? opts.inputLabels : "bugfix";
-    const maximumMatchingLabels = "maximumMatchingLabels" in opts ? opts.maximumMatchingLabels : undefined;
+    const require = "require" in opts ? opts.require : undefined;
 
     mock.method(fs, "existsSync", () => exists);
     mock.method(fs, "readFileSync", () => JSON.stringify(event));
@@ -31,10 +31,10 @@ function stubEvent(opts = {}) {
         process.env.INPUT_LABELS = inputLabels;
     }
 
-    if (maximumMatchingLabels === undefined) {
-        delete process.env.INPUT_MAXIMUM_MATCHING_LABELS;
+    if (require === undefined) {
+        delete process.env.INPUT_REQUIRE;
     } else {
-        process.env.INPUT_MAXIMUM_MATCHING_LABELS = maximumMatchingLabels;
+        process.env.INPUT_REQUIRE = require;
     }
 }
 
@@ -42,7 +42,7 @@ afterEach(() => {
     mock.restoreAll();
     delete process.env.GITHUB_EVENT_PATH;
     delete process.env.INPUT_LABELS;
-    delete process.env.INPUT_MAXIMUM_MATCHING_LABELS;
+    delete process.env.INPUT_REQUIRE;
 });
 
 test("throws when the event path is not set", () => {
@@ -62,22 +62,22 @@ test("throws when the event is not a pull request", () => {
 
 test("throws when the pull request has no labels property", () => {
     stubEvent({ event: { pull_request: {} }, inputLabels: "bugfix,new-feature" });
-    assert.throws(() => runAction(), /No labels defined on the pull request\. Required labels: bugfix, new-feature\./);
+    assert.throws(() => runAction(), /Found 0 matching label\(s\) on the pull request, but at least 1 of the configured label\(s\) is required \(bugfix, new-feature\)\./);
 });
 
 test("throws when the pull request has an empty labels array", () => {
     stubEvent({ event: { pull_request: { labels: [] } }, inputLabels: "bugfix,new-feature" });
-    assert.throws(() => runAction(), /No labels defined on the pull request\. Required labels: bugfix, new-feature\./);
+    assert.throws(() => runAction(), /Found 0 matching label\(s\) on the pull request, but at least 1 of the configured label\(s\) is required \(bugfix, new-feature\)\./);
 });
 
-test("throws when no required labels are defined for the action", () => {
+test("throws when no labels are defined for the action", () => {
     stubEvent({ inputLabels: undefined });
-    assert.throws(() => runAction(), /No required labels defined for the action\./);
+    assert.throws(() => runAction(), /No labels defined for the action\./);
 });
 
-test("throws when the required labels input contains only whitespace and commas", () => {
+test("throws when the labels input contains only whitespace and commas", () => {
     stubEvent({ inputLabels: " , , " });
-    assert.throws(() => runAction(), /No required labels defined for the action\./);
+    assert.throws(() => runAction(), /No labels defined for the action\./);
 });
 
 test("ignores empty entries in the required labels input", () => {
@@ -138,7 +138,7 @@ test("throws when none of the PR labels match the required labels", () => {
         event: { pull_request: { labels: [{ name: "documentation" }, { name: "question" }] } },
         inputLabels: "bugfix,breaking-change,new-feature",
     });
-    assert.throws(() => runAction(), /No matching required labels found\. Required labels: bugfix, breaking-change, new-feature\./);
+    assert.throws(() => runAction(), /Found 0 matching label\(s\) on the pull request, but at least 1 of the configured label\(s\) is required \(bugfix, breaking-change, new-feature\)\./);
 });
 
 test("failures raised by the action are ActionError instances", () => {
@@ -157,11 +157,11 @@ test("throws a non-ActionError when the event file is not valid JSON", () => {
     assert.throws(() => runAction(), (err) => err instanceof SyntaxError && !(err instanceof ActionError));
 });
 
-test("the maximum_matching_labels limit failure is an ActionError", () => {
+test("the require limit failure is an ActionError", () => {
     stubEvent({
         event: { pull_request: { labels: [{ name: "bugfix" }, { name: "new-feature" }] } },
         inputLabels: "bugfix,breaking-change,new-feature",
-        maximumMatchingLabels: "1",
+        require: "1",
     });
     assert.throws(() => runAction(), ActionError);
 });
@@ -190,78 +190,162 @@ test("passes by default when every supplied label matches (cap defaults to suppl
     assert.doesNotThrow(() => runAction());
 });
 
-test("throws when matching labels exceed maximum_matching_labels", () => {
+test("require: none passes when none of the labels are present", () => {
     stubEvent({
-        event: { pull_request: { labels: [{ name: "bugfix" }, { name: "new-feature" }] } },
-        inputLabels: "bugfix,breaking-change,new-feature",
-        maximumMatchingLabels: "1",
-    });
-    assert.throws(() => runAction(), /Found 2 matching label\(s\), but a maximum of 1 is allowed\./);
-});
-
-test("passes when matching labels equal maximum_matching_labels (boundary, not exceeded)", () => {
-    stubEvent({
-        event: { pull_request: { labels: [{ name: "bugfix" }, { name: "new-feature" }] } },
-        inputLabels: "bugfix,breaking-change,new-feature",
-        maximumMatchingLabels: "2",
+        event: { pull_request: { labels: [{ name: "documentation" }, { name: "question" }] } },
+        inputLabels: "do-not-merge,wip,blocked",
+        require: "none",
     });
     assert.doesNotThrow(() => runAction());
 });
 
-test("passes with maximum_matching_labels of 1 when exactly one label matches", () => {
+test("require: none passes when the pull request has no labels at all", () => {
     stubEvent({
-        event: { pull_request: { labels: [{ name: "bugfix" }, { name: "question" }] } },
-        inputLabels: "bugfix,breaking-change,new-feature",
-        maximumMatchingLabels: "1",
+        event: { pull_request: { labels: [] } },
+        inputLabels: "do-not-merge,wip,blocked",
+        require: "none",
     });
     assert.doesNotThrow(() => runAction());
 });
 
-for (const value of ["abc", "0", "-1", "1.5"]) {
-    test(`throws when maximum_matching_labels is "${value}"`, () => {
-        stubEvent({
-            event: { pull_request: { labels: [{ name: "bugfix" }] } },
-            inputLabels: "bugfix,breaking-change,new-feature",
-            maximumMatchingLabels: value,
-        });
-        assert.throws(() => runAction(), /maximum_matching_labels must be a positive integer\./);
+test("require: none passes when the pull request has no labels property", () => {
+    stubEvent({
+        event: { pull_request: {} },
+        inputLabels: "do-not-merge,wip,blocked",
+        require: "none",
     });
-}
+    assert.doesNotThrow(() => runAction());
+});
 
-for (const { label, value } of [
-    { label: "a digit string that overflows to Infinity", value: "9".repeat(400) },
-    { label: "a value above Number.MAX_SAFE_INTEGER", value: "9007199254740992" },
-]) {
-    test(`throws when maximum_matching_labels is ${label}`, () => {
+test("require: none fails and names the present labels when a listed label is present", () => {
+    stubEvent({
+        event: { pull_request: { labels: [{ name: "do-not-merge" }, { name: "wip" }, { name: "question" }] } },
+        inputLabels: "do-not-merge,wip,blocked",
+        require: "none",
+    });
+    assert.throws(() => runAction(), /Found 2 matching label\(s\) on the pull request \(do-not-merge, wip\), but at most 0 is allowed\./);
+});
+
+test("require: none escapes workflow-command characters in label names before logging", () => {
+    const injected = "block%-me\r\n::error::injected";
+    stubEvent({
+        event: { pull_request: { labels: [{ name: injected }] } },
+        inputLabels: injected,
+        require: "none",
+    });
+    const logged = [];
+    mock.method(console, "log", (msg) => logged.push(msg));
+
+    assert.throws(() => runAction());
+
+    assert.ok(logged.some(line => typeof line === "string" && line.includes("block%25-me%0D%0A::error::injected")));
+    assert.ok(!logged.some(line => typeof line === "string" && /[\r\n]/.test(line)));
+});
+
+test("require: an exact count passes when exactly that many labels match", () => {
+    stubEvent({
+        event: { pull_request: { labels: [{ name: "bugfix" }, { name: "new-feature" }] } },
+        inputLabels: "bugfix,breaking-change,new-feature",
+        require: "2",
+    });
+    assert.doesNotThrow(() => runAction());
+});
+
+test("require: an exact count fails when fewer labels match", () => {
+    stubEvent({
+        event: { pull_request: { labels: [{ name: "bugfix" }] } },
+        inputLabels: "bugfix,breaking-change,new-feature",
+        require: "2",
+    });
+    assert.throws(() => runAction(), /Found 1 matching label\(s\) on the pull request, but at least 2 of the configured label\(s\) is required \(bugfix, breaking-change, new-feature\)\./);
+});
+
+test("require: an exact count fails when more labels match", () => {
+    stubEvent({
+        event: { pull_request: { labels: [{ name: "bugfix" }, { name: "new-feature" }] } },
+        inputLabels: "bugfix,breaking-change,new-feature",
+        require: "1",
+    });
+    assert.throws(() => runAction(), /Found 2 matching label\(s\) on the pull request \(bugfix, new-feature\), but at most 1 is allowed\./);
+});
+
+test("require: <=N passes when the number of matching labels is within the cap", () => {
+    stubEvent({
+        event: { pull_request: { labels: [{ name: "bugfix" }, { name: "new-feature" }] } },
+        inputLabels: "bugfix,breaking-change,new-feature",
+        require: "<=2",
+    });
+    assert.doesNotThrow(() => runAction());
+});
+
+test("require: <=N passes when no labels match at all (lower bound is zero)", () => {
+    stubEvent({
+        event: { pull_request: { labels: [{ name: "documentation" }] } },
+        inputLabels: "bugfix,breaking-change,new-feature",
+        require: "<=2",
+    });
+    assert.doesNotThrow(() => runAction());
+});
+
+test("require: <=N fails when the number of matching labels exceeds the cap", () => {
+    stubEvent({
+        event: { pull_request: { labels: [{ name: "bugfix" }, { name: "breaking-change" }, { name: "new-feature" }] } },
+        inputLabels: "bugfix,breaking-change,new-feature",
+        require: "<=2",
+    });
+    assert.throws(() => runAction(), /Found 3 matching label\(s\) on the pull request \(bugfix, breaking-change, new-feature\), but at most 2 is allowed\./);
+});
+
+test("require: >=N passes when enough labels match", () => {
+    stubEvent({
+        event: { pull_request: { labels: [{ name: "bugfix" }, { name: "breaking-change" }] } },
+        inputLabels: "bugfix,breaking-change,new-feature",
+        require: ">=2",
+    });
+    assert.doesNotThrow(() => runAction());
+});
+
+test("require: >=N fails when too few labels match", () => {
+    stubEvent({
+        event: { pull_request: { labels: [{ name: "bugfix" }] } },
+        inputLabels: "bugfix,breaking-change,new-feature",
+        require: ">=2",
+    });
+    assert.throws(() => runAction(), /Found 1 matching label\(s\) on the pull request, but at least 2 of the configured label\(s\) is required \(bugfix, breaking-change, new-feature\)\./);
+});
+
+for (const value of ["all", "1.5", "-1", "<1", "> 2", "==2", "<=", "9".repeat(400), "9007199254740992"]) {
+    test(`throws when require is "${value}"`, () => {
         stubEvent({
             event: { pull_request: { labels: [{ name: "bugfix" }] } },
             inputLabels: "bugfix,breaking-change,new-feature",
-            maximumMatchingLabels: value,
+            require: value,
         });
-        assert.throws(() => runAction(), /maximum_matching_labels must be a positive integer\./);
+        assert.throws(() => runAction(), /require must be 'any', 'none', a non-negative integer, or a '<=' \/ '>=' comparison/);
     });
 }
 
 for (const { label, value } of [
     { label: "empty", value: "" },
-    { label: "a single space", value: " " },
-    { label: "only whitespace", value: "            " },
+    { label: "whitespace", value: "   " },
+    { label: "the keyword any", value: "any" },
+    { label: "the keyword any with surrounding whitespace and casing", value: " ANY " },
 ]) {
-    test(`treats ${label} maximum_matching_labels as unset and uses the default`, () => {
+    test(`treats ${label} require as the default at-least-one rule`, () => {
         stubEvent({
-            event: { pull_request: { labels: [{ name: "bugfix" }, { name: "new-feature" }] } },
+            event: { pull_request: { labels: [{ name: "bugfix" }, { name: "question" }] } },
             inputLabels: "bugfix,breaking-change,new-feature",
-            maximumMatchingLabels: value,
+            require: value,
         });
         assert.doesNotThrow(() => runAction());
     });
 }
 
-test("still throws the no-match error when no labels match, regardless of maximum_matching_labels", () => {
+test("resolves the none keyword regardless of casing and surrounding whitespace", () => {
     stubEvent({
-        event: { pull_request: { labels: [{ name: "documentation" }] } },
-        inputLabels: "bugfix,breaking-change,new-feature",
-        maximumMatchingLabels: "1",
+        event: { pull_request: { labels: [{ name: "do-not-merge" }] } },
+        inputLabels: "do-not-merge,wip",
+        require: " None ",
     });
-    assert.throws(() => runAction(), /No matching required labels found\. Required labels: bugfix, breaking-change, new-feature\./);
+    assert.throws(() => runAction(), /but at most 0 is allowed/);
 });

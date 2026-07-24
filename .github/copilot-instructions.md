@@ -54,10 +54,10 @@ no GitHub API calls, no token — so it runs under `permissions: {}`.
   resolved value and assign it to a `const`, rather than seeding a `let` and
   reassigning it.
 - **Use descriptive names for constants and functions.** A name should say what
-  the value or function represents (e.g. `resolveMaximumMatchingLabelsCount`,
-  not `resolveMaximumMatchingLabels`).
+  the value or function represents (e.g. `resolveRequireConstraint`,
+  not `resolveRequire`).
 - **Define helpers as `const` arrow functions**, e.g.
-  `const resolveMaximumMatchingLabelsCount = (defaultValue) => { ... }`.
+  `const resolveRequireConstraint = () => { ... }`.
 
 ## Testing
 
@@ -90,8 +90,8 @@ This is exactly what CI runs. Tests mock `node:fs` and set env vars via the
 ## Documentation
 
 - `README.md` is the user-facing documentation. Update it when inputs or
-  behavior change, keeping the documented examples (at-least-one,
-  exactly-one via `maximum_matching_labels: 1`, AND via repeated steps,
-  inverted/blocking via `continue-on-error`) accurate.
+  behavior change, keeping the documented examples (at-least-one via the
+  default `require: any`, exactly-one via `require: 1`, none/blocking via
+  `require: none`, AND via repeated steps) accurate.
 - Keep this file (`.github/copilot-instructions.md`) and the README
   up-to-date whenever the action's behavior, inputs, or conventions change.

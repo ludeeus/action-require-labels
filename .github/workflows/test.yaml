@@ -43,8 +43,8 @@ jobs:
           labels: >-
             bugfix, breaking-change, new-feature, dependencies, ci, documentation, internal, refactor
 
-  run_the_action_maximum_matching_labels:
-    name: "Run the action (maximum_matching_labels, ${{ matrix.os }})"
+  run_the_action_require_exactly_one:
+    name: "Run the action (require: 1, ${{ matrix.os }})"
     if: github.event.pull_request.labels[0] != null
     runs-on: ${{ matrix.os }}
     timeout-minutes: 5
@@ -63,10 +63,10 @@ jobs:
         with:
           labels: >-
             bugfix, breaking-change, new-feature, dependencies, ci, documentation, internal, refactor
-          maximum_matching_labels: 1
+          require: 1
 
-  run_the_action_inverted:
-    name: "Run the action (inverted, ${{ matrix.os }})"
+  run_the_action_require_none:
+    name: "Run the action (require: none, ${{ matrix.os }})"
     if: github.event.pull_request.labels[0] != null
     runs-on: ${{ matrix.os }}
     timeout-minutes: 5
@@ -81,15 +81,8 @@ jobs:
           persist-credentials: false
 
       - name: Run the local action
-        id: blocking
-        continue-on-error: true
         uses: ./
         with:
           labels: >-
             do-not-merge, wip, blocked
-
-      - name: Fail if a blocking label is present
-        if: steps.blocking.outcome == 'success'
-        run: |
-          echo "::error::A blocking label is present on the pull request."
-          exit 1
+          require: none
