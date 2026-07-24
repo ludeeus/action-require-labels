@@ -23,9 +23,9 @@ no GitHub API calls, no token — so it runs under `permissions: {}`.
 - **No GitHub API or token usage.** All data comes from
   `process.env.GITHUB_EVENT_PATH` and `INPUT_*` environment variables.
   Everything must keep working under `permissions: {}`.
-- **Escape untrusted output.** Any label-derived (user-controlled) string that
-  is printed as part of a workflow command (`::error::`, `::warning::`) must go
-  through `escapeData()` to prevent workflow-command injection.
+- **Escape label-derived output.** Any label-derived string printed as part of
+  a workflow command (`::error::`, `::warning::`) must go through `escapeData()`
+  so it stays on a single log line.
 - **Report failure via exit code, with the `ActionError` convention**: raise
   intentional failures (invalid configuration or input) as `ActionError`
   instances inside `runAction()` — the `ActionError` class is defined in
