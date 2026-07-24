@@ -66,6 +66,7 @@ const resolveMaximumMatchingLabelsCount = (defaultValue) => {
         throw new Error("maximum_matching_labels must be a positive integer.")
     }
     return maximum
+}
 
 // Workflow command data must stay on a single line; see
 // https://docs.github.com/actions/reference/workflow-commands-for-github-actions
