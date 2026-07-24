@@ -34,6 +34,18 @@ no GitHub API calls, no token — so it runs under `permissions: {}`.
 - **Keep comments to a minimum.** The code should be self-explanatory; only
   comment what the code cannot express.
 
+## Code style
+
+- **Prefer returning values over mutating `let`.** When a value is computed
+  through branching, extract the logic into a small helper that returns the
+  resolved value and assign it to a `const`, rather than seeding a `let` and
+  reassigning it.
+- **Use descriptive names for constants and functions.** A name should say what
+  the value or function represents (e.g. `resolveMaximumMatchingLabelsCount`,
+  not `resolveMaximumMatchingLabels`).
+- **Define helpers as `const` arrow functions**, e.g.
+  `const resolveMaximumMatchingLabelsCount = (defaultValue) => { ... }`.
+
 ## Testing
 
 Run the full test suite with the built-in Node test runner (no npm install):

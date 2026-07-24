@@ -204,6 +204,20 @@ for (const value of ["abc", "0", "-1", "1.5"]) {
 }
 
 for (const { label, value } of [
+    { label: "a digit string that overflows to Infinity", value: "9".repeat(400) },
+    { label: "a value above Number.MAX_SAFE_INTEGER", value: "9007199254740992" },
+]) {
+    test(`throws when maximum_matching_labels is ${label}`, () => {
+        stubEvent({
+            event: { pull_request: { labels: [{ name: "bugfix" }] } },
+            inputLabels: "bugfix,breaking-change,new-feature",
+            maximumMatchingLabels: value,
+        });
+        assert.throws(() => runAction(), /maximum_matching_labels must be a positive integer\./);
+    });
+}
+
+for (const { label, value } of [
     { label: "empty", value: "" },
     { label: "a single space", value: " " },
     { label: "only whitespace", value: "            " },
