@@ -85,7 +85,7 @@ if (require.main === module) {
         if (err instanceof ActionError) {
             console.log(`::error::${escapeData(err.message)}`)
         } else {
-            console.log(err)
+            console.error(err)
             console.log("::error::Unknown error")
         }
         process.exitCode = 1
