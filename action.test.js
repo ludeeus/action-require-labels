@@ -2,7 +2,7 @@ const { test, mock, afterEach } = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 
-const { runAction } = require("./action.js");
+const { runAction, ActionError } = require("./action.js");
 
 // Stubs the filesystem and environment that runAction reads. Nothing here
 // touches the real filesystem (fs is mocked) and the env values are
@@ -139,6 +139,31 @@ test("throws when none of the PR labels match the required labels", () => {
         inputLabels: "bugfix,breaking-change,new-feature",
     });
     assert.throws(() => runAction(), /No matching required labels found\. Required labels: bugfix, breaking-change, new-feature\./);
+});
+
+test("failures raised by the action are ActionError instances", () => {
+    stubEvent({ event: { push: {} } });
+    assert.throws(() => runAction(), ActionError);
+});
+
+test("throws a non-ActionError when the event file is not valid JSON", () => {
+    // Set up the fs mocks directly (rather than via stubEvent) so readFileSync
+    // is mocked exactly once with the malformed payload.
+    mock.method(fs, "existsSync", () => true);
+    mock.method(fs, "readFileSync", () => "{ not json");
+    process.env.GITHUB_EVENT_PATH = "/mock/event.json";
+    process.env.INPUT_LABELS = "bugfix";
+
+    assert.throws(() => runAction(), (err) => err instanceof SyntaxError && !(err instanceof ActionError));
+});
+
+test("the maximum_matching_labels limit failure is an ActionError", () => {
+    stubEvent({
+        event: { pull_request: { labels: [{ name: "bugfix" }, { name: "new-feature" }] } },
+        inputLabels: "bugfix,breaking-change,new-feature",
+        maximumMatchingLabels: "1",
+    });
+    assert.throws(() => runAction(), ActionError);
 });
 
 test("succeeds when at least one PR label matches a required label", () => {
