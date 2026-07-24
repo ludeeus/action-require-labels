@@ -147,8 +147,13 @@ test("failures raised by the action are ActionError instances", () => {
 });
 
 test("throws a non-ActionError when the event file is not valid JSON", () => {
-    stubEvent();
+    // Set up the fs mocks directly (rather than via stubEvent) so readFileSync
+    // is mocked exactly once with the malformed payload.
+    mock.method(fs, "existsSync", () => true);
     mock.method(fs, "readFileSync", () => "{ not json");
+    process.env.GITHUB_EVENT_PATH = "/mock/event.json";
+    process.env.INPUT_LABELS = "bugfix";
+
     assert.throws(() => runAction(), (err) => err instanceof SyntaxError && !(err instanceof ActionError));
 });
 
