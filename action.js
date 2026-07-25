@@ -5,14 +5,10 @@ const fs = require("node:fs")
 class ActionError extends Error {}
 
 const runAction = () => {
-    const { eventData, requiredLabels, maximumMatchingLabelsCount } = resolveConfiguration()
+    const { eventData, requiredLabels, maximumMatchingLabelsCount, summaryMode } = resolveConfiguration()
     const requiredLabelsList = Array.from(requiredLabels).join(", ")
 
-    if (!eventData.pull_request.labels || eventData.pull_request.labels.length === 0) {
-        throw new ActionError(`No labels defined on the pull request. Required labels: ${requiredLabelsList}.`)
-    }
-
-    const prLabels = eventData.pull_request.labels.map(label => label.name)
+    const prLabels = (eventData.pull_request.labels || []).map(label => label.name)
 
     console.log(`Required labels (${escapeData(requiredLabelsList)})`)
     console.log(`Pull request labels (${escapeData(prLabels.join(", "))})`)
@@ -20,13 +16,22 @@ const runAction = () => {
     const matchingLabels = prLabels.filter(label => requiredLabels.has(label))
     console.log(`Found ${matchingLabels.length} matching label(s) on the pull request (${escapeData(matchingLabels.join(", "))})`)
 
-    if (matchingLabels.length === 0) {
-        throw new ActionError(`No matching required labels found. Required labels: ${requiredLabelsList}.`)
-    }
+    const failureMessage = resolveFailureMessage({ requiredLabelsList, prLabels, matchingLabels, maximumMatchingLabelsCount })
 
-    if (matchingLabels.length > maximumMatchingLabelsCount) {
-        throw new ActionError(`Found ${matchingLabels.length} matching label(s), but a maximum of ${maximumMatchingLabelsCount} is allowed.`)
+    return { summaryMode, requiredLabels, prLabels, matchingLabels, maximumMatchingLabelsCount, failureMessage }
+}
+
+const resolveFailureMessage = ({ requiredLabelsList, prLabels, matchingLabels, maximumMatchingLabelsCount }) => {
+    if (prLabels.length === 0) {
+        return `No labels defined on the pull request. Required labels: ${requiredLabelsList}.`
     }
+    if (matchingLabels.length === 0) {
+        return `No matching required labels found. Required labels: ${requiredLabelsList}.`
+    }
+    if (matchingLabels.length > maximumMatchingLabelsCount) {
+        return `Found ${matchingLabels.length} matching label(s), but a maximum of ${maximumMatchingLabelsCount} is allowed.`
+    }
+    return null
 }
 
 const resolveConfiguration = () => {
@@ -44,8 +49,9 @@ const resolveConfiguration = () => {
 
     const requiredLabels = resolveRequiredLabels()
     const maximumMatchingLabelsCount = resolveMaximumMatchingLabelsCount(requiredLabels.size)
+    const summaryMode = resolveSummaryMode()
 
-    return { eventData, requiredLabels, maximumMatchingLabelsCount }
+    return { eventData, requiredLabels, maximumMatchingLabelsCount, summaryMode }
 }
 
 const resolveRequiredLabels = () => {
@@ -90,9 +96,87 @@ const escapeData = (data) => {
     return data.replace(/%/g, "%25").replace(/\r/g, "%0D").replace(/\n/g, "%0A")
 }
 
-if (require.main === module) {
+const SUMMARY_MODES = {
+    never: null,
+    always: { errorOnly: false, minimal: false },
+    error: { errorOnly: true, minimal: false },
+    minimal: { errorOnly: false, minimal: true },
+    minimal_error: { errorOnly: true, minimal: true },
+}
+
+const resolveSummaryMode = () => {
+    const name = (process.env.INPUT_SUMMARY || "").trim().toLowerCase() || "never"
+    if (!Object.hasOwn(SUMMARY_MODES, name)) {
+        throw new ActionError(`summary must be one of: ${Object.keys(SUMMARY_MODES).join(", ")}.`)
+    }
+    return SUMMARY_MODES[name]
+}
+
+const shouldWriteSummary = (mode, failed) => mode !== null && (!mode.errorOnly || failed)
+
+// Keeps a label-derived value inside a single, unbroken markdown table cell.
+const escapeMarkdown = (text) => text
+    .replace(/\\/g, "\\\\")
+    .replace(/`/g, "\\`")
+    .replace(/\|/g, "\\|")
+    .replace(/\r?\n/g, " ")
+
+// The action's own repository and ref (tag/branch/SHA) from `uses:`, so the
+// summary links to the documentation matching the version in use. Both are
+// unset for a local action (`uses: ./`), where no link is rendered.
+const resolveDocumentationLink = () => {
+    const repository = process.env.GITHUB_ACTION_REPOSITORY
+    const ref = process.env.GITHUB_ACTION_REF
+    if (!repository || !ref) {
+        return null
+    }
+    return `[${repository}@${ref} documentation](https://github.com/${repository}/blob/${ref}/README.md)`
+}
+
+const buildSummary = ({ requiredLabels, prLabels, matchingLabels, maximumMatchingLabelsCount, failureMessage, minimal, documentationLink }) => {
+    const labelCell = (labels) => labels.length === 0 ? "_(none)_" : labels.map(escapeMarkdown).join(", ")
+    const capNote = maximumMatchingLabelsCount < requiredLabels.size ? ` (max ${maximumMatchingLabelsCount} allowed)` : ""
+    const statusLine = failureMessage
+        ? `❌ **Failed** — ${escapeMarkdown(failureMessage)}`
+        : `✅ **Passed** — ${matchingLabels.length} of ${requiredLabels.size} required labels present${capNote}.`
+
+    const table = minimal ? [] : [
+        "| Group | Labels |",
+        "| --- | --- |",
+        `| Required | ${labelCell(Array.from(requiredLabels))} |`,
+        `| Present | ${labelCell(prLabels)} |`,
+        `| Matched | ${labelCell(matchingLabels)} |`,
+        "",
+        ...(documentationLink ? [documentationLink, ""] : []),
+    ]
+
+    return ["## Required labels", "", statusLine, "", ...table].join("\n")
+}
+
+const writeSummary = (result) => {
+    const summaryPath = process.env.GITHUB_STEP_SUMMARY
+    if (!summaryPath) {
+        return
+    }
+    fs.appendFileSync(summaryPath, buildSummary({
+        ...result,
+        minimal: result.summaryMode.minimal,
+        documentationLink: resolveDocumentationLink(),
+    }))
+}
+
+const main = () => {
     try {
-        runAction()
+        const result = runAction()
+
+        if (shouldWriteSummary(result.summaryMode, result.failureMessage !== null)) {
+            writeSummary(result)
+        }
+
+        if (result.failureMessage) {
+            console.log(`::error::${escapeData(result.failureMessage)}`)
+            process.exitCode = 1
+        }
     } catch (err) {
         if (err instanceof ActionError) {
             console.log(`::error::${escapeData(err.message)}`)
@@ -103,4 +187,8 @@ if (require.main === module) {
     }
 }
 
-module.exports = { runAction, ActionError }
+if (require.main === module) {
+    main()
+}
+
+module.exports = { runAction, main, ActionError }

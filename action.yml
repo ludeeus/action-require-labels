@@ -7,6 +7,14 @@ inputs:
   maximum_matching_labels:
     description: 'Maximum number of matching labels allowed. Defaults to the number of supplied labels.'
     required: false
+  summary:
+    description: >-
+      When to write a summary of the required, present, and matched labels to
+      the GitHub step summary. One of: never (default), always (full table on
+      every run), error (full table only on failure), minimal (status line
+      only, on every run), minimal_error (status line only, only on failure).
+    required: false
+    default: 'never'
 runs:
   using: 'node24'
   main: 'action.js'

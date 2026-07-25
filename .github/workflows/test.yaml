@@ -42,6 +42,7 @@ jobs:
         with:
           labels: >-
             bugfix, breaking-change, new-feature, dependencies, ci, documentation, internal, refactor
+          summary: always
 
   run_the_action_maximum_matching_labels:
     name: "Run the action (maximum_matching_labels, ${{ matrix.os }})"

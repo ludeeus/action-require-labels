@@ -41,9 +41,25 @@ The check fails when **more than** this many of the listed labels are present. I
 
 It must be a positive integer.
 
+### `summary`
+
+**Optional** Controls the summary written to the [GitHub step summary](https://docs.github.com/actions/using-workflows/workflow-commands-for-github-actions#adding-a-job-summary), so the result is visible in the run UI instead of only in the logs.
+
+The full summary is a table listing the **required**, **present**, and **matched** labels, along with a pass/fail status line. Choose how much to write and when with one of:
+
+| Value | Behavior |
+| --- | --- |
+| `never` | Write nothing. **Default.** |
+| `always` | Write the full table on every run. |
+| `error` | Write the full table only when the check fails — where it is most useful, since it shows which labels were present versus required. |
+| `minimal` | Write only the pass/fail status line (no table) on every run. |
+| `minimal_error` | Write only the pass/fail status line (no table), and only when the check fails. |
+
+The full-table modes (`always`, `error`) also link to this documentation for the action version in use. The value is matched case-insensitively; any other value fails the action. This input has no effect on whether the check itself passes or fails.
+
 ## Behavior
 
-The result is communicated through the step's success or failure; the action has no outputs.
+The result is communicated through the step's success or failure; the action has no outputs. Depending on [`summary`](#summary), it can additionally write a summary of the required, present, and matched labels to the run's step summary.
 
 The step **passes** when the pull request has at least one of the configured labels.
 

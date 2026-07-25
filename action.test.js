@@ -2,7 +2,9 @@ const { test, mock, afterEach } = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 
-const { runAction, ActionError } = require("./action.js");
+const { runAction, main, ActionError } = require("./action.js");
+
+const originalExitCode = process.exitCode;
 
 // Stubs the filesystem and environment that runAction reads. Nothing here
 // touches the real filesystem (fs is mocked) and the env values are
@@ -15,6 +17,10 @@ function stubEvent(opts = {}) {
     const eventPath = "eventPath" in opts ? opts.eventPath : "/mock/event.json";
     const inputLabels = "inputLabels" in opts ? opts.inputLabels : "bugfix";
     const maximumMatchingLabels = "maximumMatchingLabels" in opts ? opts.maximumMatchingLabels : undefined;
+    const summary = "summary" in opts ? opts.summary : undefined;
+    const stepSummaryPath = "stepSummaryPath" in opts ? opts.stepSummaryPath : undefined;
+    const actionRepository = "actionRepository" in opts ? opts.actionRepository : undefined;
+    const actionRef = "actionRef" in opts ? opts.actionRef : undefined;
 
     mock.method(fs, "existsSync", () => exists);
     mock.method(fs, "readFileSync", () => JSON.stringify(event));
@@ -36,6 +42,43 @@ function stubEvent(opts = {}) {
     } else {
         process.env.INPUT_MAXIMUM_MATCHING_LABELS = maximumMatchingLabels;
     }
+
+    if (summary === undefined) {
+        delete process.env.INPUT_SUMMARY;
+    } else {
+        process.env.INPUT_SUMMARY = summary;
+    }
+
+    if (stepSummaryPath === undefined) {
+        delete process.env.GITHUB_STEP_SUMMARY;
+    } else {
+        process.env.GITHUB_STEP_SUMMARY = stepSummaryPath;
+    }
+
+    if (actionRepository === undefined) {
+        delete process.env.GITHUB_ACTION_REPOSITORY;
+    } else {
+        process.env.GITHUB_ACTION_REPOSITORY = actionRepository;
+    }
+
+    if (actionRef === undefined) {
+        delete process.env.GITHUB_ACTION_REF;
+    } else {
+        process.env.GITHUB_ACTION_REF = actionRef;
+    }
+}
+
+// Captures the summary file writes main() performs, so no test touches disk.
+function captureSummary() {
+    const writes = [];
+    mock.method(fs, "appendFileSync", (path, data) => writes.push({ path, data }));
+    return writes;
+}
+
+function captureLog() {
+    const logged = [];
+    mock.method(console, "log", (msg) => logged.push(msg));
+    return logged;
 }
 
 afterEach(() => {
@@ -43,6 +86,13 @@ afterEach(() => {
     delete process.env.GITHUB_EVENT_PATH;
     delete process.env.INPUT_LABELS;
     delete process.env.INPUT_MAXIMUM_MATCHING_LABELS;
+    delete process.env.INPUT_SUMMARY;
+    delete process.env.GITHUB_STEP_SUMMARY;
+    delete process.env.GITHUB_ACTION_REPOSITORY;
+    delete process.env.GITHUB_ACTION_REF;
+    // main() sets process.exitCode on failure; restore it so a failing-run test
+    // cannot make the test runner itself exit non-zero.
+    process.exitCode = originalExitCode;
 });
 
 test("throws when the event path is not set", () => {
@@ -60,14 +110,14 @@ test("throws when the event is not a pull request", () => {
     assert.throws(() => runAction(), /This is not a pull request\./);
 });
 
-test("throws when the pull request has no labels property", () => {
+test("reports a failure when the pull request has no labels property", () => {
     stubEvent({ event: { pull_request: {} }, inputLabels: "bugfix,new-feature" });
-    assert.throws(() => runAction(), /No labels defined on the pull request\. Required labels: bugfix, new-feature\./);
+    assert.equal(runAction().failureMessage, "No labels defined on the pull request. Required labels: bugfix, new-feature.");
 });
 
-test("throws when the pull request has an empty labels array", () => {
+test("reports a failure when the pull request has an empty labels array", () => {
     stubEvent({ event: { pull_request: { labels: [] } }, inputLabels: "bugfix,new-feature" });
-    assert.throws(() => runAction(), /No labels defined on the pull request\. Required labels: bugfix, new-feature\./);
+    assert.equal(runAction().failureMessage, "No labels defined on the pull request. Required labels: bugfix, new-feature.");
 });
 
 test("throws when no required labels are defined for the action", () => {
@@ -85,7 +135,7 @@ test("ignores empty entries in the required labels input", () => {
         event: { pull_request: { labels: [{ name: "new-feature" }] } },
         inputLabels: "bugfix,,new-feature,",
     });
-    assert.doesNotThrow(() => runAction());
+    assert.equal(runAction().failureMessage, null);
 });
 
 test("warns when the same label is supplied multiple times in the input", () => {
@@ -93,10 +143,9 @@ test("warns when the same label is supplied multiple times in the input", () => 
         event: { pull_request: { labels: [{ name: "bugfix" }] } },
         inputLabels: "bugfix,bugfix,new-feature,bugfix,new-feature",
     });
-    const logged = [];
-    mock.method(console, "log", (msg) => logged.push(msg));
+    const logged = captureLog();
 
-    assert.doesNotThrow(() => runAction());
+    assert.equal(runAction().failureMessage, null);
 
     const warnings = logged.filter(line => typeof line === "string" && line.startsWith("::warning::"));
     assert.equal(warnings.length, 1);
@@ -108,10 +157,9 @@ test("does not warn when every supplied label is unique", () => {
         event: { pull_request: { labels: [{ name: "bugfix" }] } },
         inputLabels: "bugfix,breaking-change,new-feature",
     });
-    const logged = [];
-    mock.method(console, "log", (msg) => logged.push(msg));
+    const logged = captureLog();
 
-    assert.doesNotThrow(() => runAction());
+    assert.equal(runAction().failureMessage, null);
 
     const warnings = logged.filter(line => typeof line === "string" && line.startsWith("::warning::"));
     assert.equal(warnings.length, 0);
@@ -122,10 +170,9 @@ test("escapes workflow-command characters in label names before logging", () => 
         event: { pull_request: { labels: [{ name: "50%-done\r\n::error::injected" }] } },
         inputLabels: "50%-done\r\n::error::injected",
     });
-    const logged = [];
-    mock.method(console, "log", (msg) => logged.push(msg));
+    const logged = captureLog();
 
-    assert.doesNotThrow(() => runAction());
+    assert.equal(runAction().failureMessage, null);
 
     const escaped = "50%25-done%0D%0A::error::injected";
     const labelLines = logged.filter(line => typeof line === "string" && line.includes(escaped));
@@ -133,15 +180,15 @@ test("escapes workflow-command characters in label names before logging", () => 
     assert.ok(!logged.some(line => typeof line === "string" && /[\r\n]/.test(line)));
 });
 
-test("throws when none of the PR labels match the required labels", () => {
+test("reports a failure when none of the PR labels match the required labels", () => {
     stubEvent({
         event: { pull_request: { labels: [{ name: "documentation" }, { name: "question" }] } },
         inputLabels: "bugfix,breaking-change,new-feature",
     });
-    assert.throws(() => runAction(), /No matching required labels found\. Required labels: bugfix, breaking-change, new-feature\./);
+    assert.equal(runAction().failureMessage, "No matching required labels found. Required labels: bugfix, breaking-change, new-feature.");
 });
 
-test("failures raised by the action are ActionError instances", () => {
+test("invalid configuration is raised as an ActionError", () => {
     stubEvent({ event: { push: {} } });
     assert.throws(() => runAction(), ActionError);
 });
@@ -157,21 +204,12 @@ test("throws a non-ActionError when the event file is not valid JSON", () => {
     assert.throws(() => runAction(), (err) => err instanceof SyntaxError && !(err instanceof ActionError));
 });
 
-test("the maximum_matching_labels limit failure is an ActionError", () => {
-    stubEvent({
-        event: { pull_request: { labels: [{ name: "bugfix" }, { name: "new-feature" }] } },
-        inputLabels: "bugfix,breaking-change,new-feature",
-        maximumMatchingLabels: "1",
-    });
-    assert.throws(() => runAction(), ActionError);
-});
-
 test("succeeds when at least one PR label matches a required label", () => {
     stubEvent({
         event: { pull_request: { labels: [{ name: "bugfix" }, { name: "question" }] } },
         inputLabels: "bugfix,breaking-change,new-feature",
     });
-    assert.doesNotThrow(() => runAction());
+    assert.equal(runAction().failureMessage, null);
 });
 
 test("trims whitespace around required labels before matching", () => {
@@ -179,7 +217,7 @@ test("trims whitespace around required labels before matching", () => {
         event: { pull_request: { labels: [{ name: "bugfix" }] } },
         inputLabels: " bugfix , breaking-change , new-feature ",
     });
-    assert.doesNotThrow(() => runAction());
+    assert.equal(runAction().failureMessage, null);
 });
 
 test("passes by default when every supplied label matches (cap defaults to supplied count)", () => {
@@ -187,16 +225,16 @@ test("passes by default when every supplied label matches (cap defaults to suppl
         event: { pull_request: { labels: [{ name: "bugfix" }, { name: "breaking-change" }, { name: "new-feature" }] } },
         inputLabels: "bugfix,breaking-change,new-feature",
     });
-    assert.doesNotThrow(() => runAction());
+    assert.equal(runAction().failureMessage, null);
 });
 
-test("throws when matching labels exceed maximum_matching_labels", () => {
+test("reports a failure when matching labels exceed maximum_matching_labels", () => {
     stubEvent({
         event: { pull_request: { labels: [{ name: "bugfix" }, { name: "new-feature" }] } },
         inputLabels: "bugfix,breaking-change,new-feature",
         maximumMatchingLabels: "1",
     });
-    assert.throws(() => runAction(), /Found 2 matching label\(s\), but a maximum of 1 is allowed\./);
+    assert.equal(runAction().failureMessage, "Found 2 matching label(s), but a maximum of 1 is allowed.");
 });
 
 test("passes when matching labels equal maximum_matching_labels (boundary, not exceeded)", () => {
@@ -205,7 +243,7 @@ test("passes when matching labels equal maximum_matching_labels (boundary, not e
         inputLabels: "bugfix,breaking-change,new-feature",
         maximumMatchingLabels: "2",
     });
-    assert.doesNotThrow(() => runAction());
+    assert.equal(runAction().failureMessage, null);
 });
 
 test("passes with maximum_matching_labels of 1 when exactly one label matches", () => {
@@ -214,7 +252,7 @@ test("passes with maximum_matching_labels of 1 when exactly one label matches", 
         inputLabels: "bugfix,breaking-change,new-feature",
         maximumMatchingLabels: "1",
     });
-    assert.doesNotThrow(() => runAction());
+    assert.equal(runAction().failureMessage, null);
 });
 
 for (const value of ["abc", "0", "-1", "1.5"]) {
@@ -253,15 +291,383 @@ for (const { label, value } of [
             inputLabels: "bugfix,breaking-change,new-feature",
             maximumMatchingLabels: value,
         });
-        assert.doesNotThrow(() => runAction());
+        assert.equal(runAction().failureMessage, null);
     });
 }
 
-test("still throws the no-match error when no labels match, regardless of maximum_matching_labels", () => {
+test("still reports the no-match failure when no labels match, regardless of maximum_matching_labels", () => {
     stubEvent({
         event: { pull_request: { labels: [{ name: "documentation" }] } },
         inputLabels: "bugfix,breaking-change,new-feature",
         maximumMatchingLabels: "1",
     });
-    assert.throws(() => runAction(), /No matching required labels found\. Required labels: bugfix, breaking-change, new-feature\./);
+    assert.equal(runAction().failureMessage, "No matching required labels found. Required labels: bugfix, breaking-change, new-feature.");
+});
+
+test("throws when the summary mode is not recognized", () => {
+    stubEvent({ summary: "verbose" });
+    assert.throws(() => runAction(), /summary must be one of: never, always, error, minimal, minimal_error\./);
+});
+
+test("the unrecognized summary mode failure is an ActionError", () => {
+    stubEvent({ summary: "verbose" });
+    assert.throws(() => runAction(), ActionError);
+});
+
+test("main() exits zero and logs no error on a passing run", () => {
+    stubEvent({ event: { pull_request: { labels: [{ name: "bugfix" }] } }, inputLabels: "bugfix" });
+    const logged = captureLog();
+
+    main();
+
+    assert.equal(process.exitCode, originalExitCode);
+    assert.ok(!logged.some(line => typeof line === "string" && line.startsWith("::error::")));
+});
+
+test("main() logs the escaped failure and exits non-zero on a failing run", () => {
+    stubEvent({
+        event: { pull_request: { labels: [{ name: "documentation" }] } },
+        inputLabels: "bugfix,breaking-change",
+    });
+    const logged = captureLog();
+
+    main();
+
+    assert.equal(process.exitCode, 1);
+    assert.ok(logged.includes("::error::No matching required labels found. Required labels: bugfix, breaking-change."));
+});
+
+test("main() escapes label-derived characters in the failure annotation", () => {
+    stubEvent({
+        event: { pull_request: { labels: [{ name: "question" }] } },
+        inputLabels: "50%-done\r\n::error::injected",
+    });
+    const logged = captureLog();
+
+    main();
+
+    assert.equal(process.exitCode, 1);
+    const errors = logged.filter(line => typeof line === "string" && line.startsWith("::error::"));
+    assert.equal(errors.length, 1);
+    assert.match(errors[0], /50%25-done%0D%0A::error::injected/);
+    assert.ok(!/[\r\n]/.test(errors[0]));
+});
+
+test("main() reports an invalid configuration as an escaped ActionError annotation", () => {
+    stubEvent({ event: { push: {} } });
+    const logged = captureLog();
+
+    main();
+
+    assert.equal(process.exitCode, 1);
+    assert.ok(logged.includes("::error::This is not a pull request."));
+});
+
+test("main() withholds the message for an unexpected error", () => {
+    mock.method(fs, "existsSync", () => true);
+    mock.method(fs, "readFileSync", () => "{ not json");
+    process.env.GITHUB_EVENT_PATH = "/mock/event.json";
+    process.env.INPUT_LABELS = "bugfix";
+    const logged = captureLog();
+
+    main();
+
+    assert.equal(process.exitCode, 1);
+    assert.ok(logged.includes("::error::Unknown error"));
+    assert.ok(!logged.some(line => typeof line === "string" && line.includes("not json")));
+});
+
+test("does not write a summary when the input is unset (defaults to never)", () => {
+    stubEvent({ stepSummaryPath: "/mock/summary.md" });
+    const writes = captureSummary();
+
+    main();
+
+    assert.equal(writes.length, 0);
+});
+
+test("does not write a summary when the mode is \"never\"", () => {
+    stubEvent({ summary: "never", stepSummaryPath: "/mock/summary.md" });
+    const writes = captureSummary();
+
+    main();
+
+    assert.equal(writes.length, 0);
+});
+
+test("does not write a summary when \"always\" but GITHUB_STEP_SUMMARY is unset", () => {
+    stubEvent({ summary: "always" });
+    const writes = captureSummary();
+
+    main();
+
+    assert.equal(writes.length, 0);
+});
+
+test("\"always\" writes a passing summary with the three label groups", () => {
+    stubEvent({
+        event: { pull_request: { labels: [{ name: "bugfix" }, { name: "question" }] } },
+        inputLabels: "bugfix,breaking-change,new-feature",
+        summary: "always",
+        stepSummaryPath: "/mock/summary.md",
+    });
+    const writes = captureSummary();
+
+    main();
+
+    assert.equal(writes.length, 1);
+    assert.equal(writes[0].path, "/mock/summary.md");
+    const written = writes[0].data;
+    assert.match(written, /## Required labels/);
+    assert.match(written, /✅ \*\*Passed\*\* — 1 of 3 required labels present\./);
+    assert.match(written, /\| Required \| bugfix, breaking-change, new-feature \|/);
+    assert.match(written, /\| Present \| bugfix, question \|/);
+    assert.match(written, /\| Matched \| bugfix \|/);
+});
+
+test("shows the cap in the passing summary only when it constrains", () => {
+    stubEvent({
+        event: { pull_request: { labels: [{ name: "p1" }] } },
+        inputLabels: "p1,p2,p3",
+        maximumMatchingLabels: "1",
+        summary: "always",
+        stepSummaryPath: "/mock/summary.md",
+    });
+    const writes = captureSummary();
+
+    main();
+
+    assert.match(writes[0].data, /✅ \*\*Passed\*\* — 1 of 3 required labels present \(max 1 allowed\)\./);
+});
+
+test("omits the cap from the passing summary when it uses the default", () => {
+    stubEvent({
+        event: { pull_request: { labels: [{ name: "bugfix" }] } },
+        inputLabels: "bugfix,breaking-change,new-feature",
+        summary: "always",
+        stepSummaryPath: "/mock/summary.md",
+    });
+    const writes = captureSummary();
+
+    main();
+
+    assert.doesNotMatch(writes[0].data, /\(max \d+ allowed\)/);
+});
+
+test("\"always\" writes a failing summary and still exits non-zero", () => {
+    stubEvent({
+        event: { pull_request: { labels: [{ name: "documentation" }] } },
+        inputLabels: "bugfix,breaking-change",
+        summary: "always",
+        stepSummaryPath: "/mock/summary.md",
+    });
+    const writes = captureSummary();
+
+    main();
+
+    assert.equal(process.exitCode, 1);
+    assert.equal(writes.length, 1);
+    const written = writes[0].data;
+    assert.match(written, /❌ \*\*Failed\*\* — No matching required labels found\./);
+    assert.match(written, /\| Matched \| _\(none\)_ \|/);
+});
+
+test("\"always\" writes an empty Present group when the pull request has no labels", () => {
+    stubEvent({
+        event: { pull_request: { labels: [] } },
+        inputLabels: "bugfix,breaking-change",
+        summary: "always",
+        stepSummaryPath: "/mock/summary.md",
+    });
+    const writes = captureSummary();
+
+    main();
+
+    assert.equal(process.exitCode, 1);
+    assert.match(writes[0].data, /\| Present \| _\(none\)_ \|/);
+});
+
+test("\"always\" writes the summary for the maximum_matching_labels failure", () => {
+    stubEvent({
+        event: { pull_request: { labels: [{ name: "bugfix" }, { name: "new-feature" }] } },
+        inputLabels: "bugfix,breaking-change,new-feature",
+        maximumMatchingLabels: "1",
+        summary: "always",
+        stepSummaryPath: "/mock/summary.md",
+    });
+    const writes = captureSummary();
+
+    main();
+
+    assert.equal(process.exitCode, 1);
+    assert.match(writes[0].data, /❌ \*\*Failed\*\* — Found 2 matching label\(s\), but a maximum of 1 is allowed\./);
+});
+
+test("does not write a summary when an invalid configuration prevents the check", () => {
+    stubEvent({ event: { push: {} }, summary: "always", stepSummaryPath: "/mock/summary.md" });
+    const writes = captureSummary();
+
+    main();
+
+    assert.equal(process.exitCode, 1);
+    assert.equal(writes.length, 0);
+});
+
+test("\"error\" does not write a summary on a passing run", () => {
+    stubEvent({
+        event: { pull_request: { labels: [{ name: "bugfix" }] } },
+        inputLabels: "bugfix,breaking-change",
+        summary: "error",
+        stepSummaryPath: "/mock/summary.md",
+    });
+    const writes = captureSummary();
+
+    main();
+
+    assert.equal(writes.length, 0);
+});
+
+test("\"error\" writes the full table on a failing run", () => {
+    stubEvent({
+        event: { pull_request: { labels: [{ name: "documentation" }] } },
+        inputLabels: "bugfix,breaking-change",
+        summary: "error",
+        stepSummaryPath: "/mock/summary.md",
+    });
+    const writes = captureSummary();
+
+    main();
+
+    assert.equal(writes.length, 1);
+    assert.match(writes[0].data, /❌ \*\*Failed\*\*/);
+    assert.match(writes[0].data, /\| Matched \| _\(none\)_ \|/);
+});
+
+test("\"minimal\" writes only the status line on a passing run", () => {
+    stubEvent({
+        event: { pull_request: { labels: [{ name: "bugfix" }] } },
+        inputLabels: "bugfix,breaking-change,new-feature",
+        summary: "minimal",
+        stepSummaryPath: "/mock/summary.md",
+    });
+    const writes = captureSummary();
+
+    main();
+
+    assert.equal(writes.length, 1);
+    const written = writes[0].data;
+    assert.match(written, /## Required labels/);
+    assert.match(written, /✅ \*\*Passed\*\* — 1 of 3 required labels present\./);
+    assert.doesNotMatch(written, /\| Group \| Labels \|/);
+});
+
+test("\"minimal\" writes the status line on a failing run", () => {
+    stubEvent({
+        event: { pull_request: { labels: [{ name: "documentation" }] } },
+        inputLabels: "bugfix,breaking-change",
+        summary: "minimal",
+        stepSummaryPath: "/mock/summary.md",
+    });
+    const writes = captureSummary();
+
+    main();
+
+    assert.equal(writes.length, 1);
+    assert.match(writes[0].data, /❌ \*\*Failed\*\*/);
+    assert.doesNotMatch(writes[0].data, /\| Group \| Labels \|/);
+});
+
+test("\"minimal_error\" does not write a summary on a passing run", () => {
+    stubEvent({
+        event: { pull_request: { labels: [{ name: "bugfix" }] } },
+        inputLabels: "bugfix,breaking-change",
+        summary: "minimal_error",
+        stepSummaryPath: "/mock/summary.md",
+    });
+    const writes = captureSummary();
+
+    main();
+
+    assert.equal(writes.length, 0);
+});
+
+test("\"minimal_error\" writes only the status line on a failing run", () => {
+    stubEvent({
+        event: { pull_request: { labels: [{ name: "documentation" }] } },
+        inputLabels: "bugfix,breaking-change",
+        summary: "minimal_error",
+        stepSummaryPath: "/mock/summary.md",
+    });
+    const writes = captureSummary();
+
+    main();
+
+    assert.equal(writes.length, 1);
+    assert.match(writes[0].data, /❌ \*\*Failed\*\*/);
+    assert.doesNotMatch(writes[0].data, /\| Group \| Labels \|/);
+});
+
+test("escapes markdown-breaking characters in label names within the summary", () => {
+    stubEvent({
+        event: { pull_request: { labels: [{ name: "a|b`c\r\nd" }] } },
+        inputLabels: "a|b`c\r\nd",
+        summary: "always",
+        stepSummaryPath: "/mock/summary.md",
+    });
+    const writes = captureSummary();
+
+    main();
+
+    const written = writes[0].data;
+    assert.match(written, /a\\\|b\\`c d/);
+    assert.ok(!written.includes("a|b"));
+    for (const line of written.split("\n")) {
+        assert.ok(!/[\r\n]/.test(line));
+    }
+});
+
+test("links the full summary to the docs for the action ref in use", () => {
+    stubEvent({
+        event: { pull_request: { labels: [{ name: "bugfix" }] } },
+        inputLabels: "bugfix,breaking-change",
+        summary: "always",
+        stepSummaryPath: "/mock/summary.md",
+        actionRepository: "ludeeus/action-require-labels",
+        actionRef: "2.0.0",
+    });
+    const writes = captureSummary();
+
+    main();
+
+    assert.match(writes[0].data, /\[ludeeus\/action-require-labels@2\.0\.0 documentation\]\(https:\/\/github\.com\/ludeeus\/action-require-labels\/blob\/2\.0\.0\/README\.md\)/);
+});
+
+test("omits the docs link when the action repository and ref are unset", () => {
+    stubEvent({
+        event: { pull_request: { labels: [{ name: "bugfix" }] } },
+        inputLabels: "bugfix,breaking-change",
+        summary: "always",
+        stepSummaryPath: "/mock/summary.md",
+    });
+    const writes = captureSummary();
+
+    main();
+
+    assert.doesNotMatch(writes[0].data, /documentation\]/);
+});
+
+test("omits the docs link from the minimal summary even when the ref is set", () => {
+    stubEvent({
+        event: { pull_request: { labels: [{ name: "bugfix" }] } },
+        inputLabels: "bugfix,breaking-change",
+        summary: "minimal",
+        stepSummaryPath: "/mock/summary.md",
+        actionRepository: "ludeeus/action-require-labels",
+        actionRef: "2.0.0",
+    });
+    const writes = captureSummary();
+
+    main();
+
+    assert.doesNotMatch(writes[0].data, /documentation\]/);
 });
