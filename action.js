@@ -187,8 +187,7 @@ const main = () => {
         }
 
         if (result.failureMessage) {
-            console.log(`::error::${escapeData(result.failureMessage)}`)
-            process.exitCode = 1
+            throw new ActionError(result.failureMessage)
         }
     } catch (err) {
         if (err instanceof ActionError) {

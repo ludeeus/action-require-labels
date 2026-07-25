@@ -42,13 +42,14 @@ no GitHub API calls, no token — so it runs under `permissions: {}`.
   intentional failures for **invalid configuration or input** as `ActionError`
   instances (in `resolveConfiguration()` and the `resolve*` helpers it calls) —
   the `ActionError` class is defined in `action.js` and exported alongside
-  `runAction` and `main`. A failed *check* is not an `ActionError`; it is the
-  returned `failureMessage`. `main()` catches everything and sets
-  `process.exitCode = 1`; the action has no outputs. For a `failureMessage` or an
-  `ActionError` it prints the escaped message via
-  `::error::${escapeData(...)}`; for any other (unexpected) error it deliberately
-  prints a generic `::error::Unknown error`, withholding the message rather than
-  leaking internal detail.
+  `runAction` and `main`. `runAction()` itself never throws for a failed check;
+  it returns the `failureMessage`, and `main()` raises that as an `ActionError`
+  once the summary has been written, so every failure is reported through a
+  single path. That path is `main()`'s catch: it sets `process.exitCode = 1` (the
+  action has no outputs) and, for an `ActionError`, prints the escaped message via
+  `::error::${escapeData(err.message)}`; for any other (unexpected) error it
+  deliberately prints a generic `::error::Unknown error`, withholding the message
+  rather than leaking internal detail.
 - **Node 24 / CommonJS.** Match the declared runtime in `action.yml`; use
   `require()`, not ESM imports.
 - **Comments are the exception, not the default.** Do not comment what names,
