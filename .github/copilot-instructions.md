@@ -7,8 +7,9 @@ no GitHub API calls, no token — so it runs under `permissions: {}`.
 ## Repository layout
 
 - `action.yml` — action manifest (`runs.using: node24`, `main: action.js`)
-- `action.js` — the entire implementation (CommonJS, exports `runAction`)
+- `action.js` — the entire implementation (CommonJS, exports `runAction` and `main`)
 - `action.test.js` — unit tests using the built-in `node:test` runner
+- `action.test.js.snapshot` — committed snapshots of the generated step summaries
 - `.github/workflows/unittest.yaml` — runs `node --test` on PRs/pushes to `main`
 - `.github/workflows/test.yaml` — integration self-test that runs the local
   action (`uses: ./`) against this repo's own PR labels
@@ -25,16 +26,30 @@ no GitHub API calls, no token — so it runs under `permissions: {}`.
   Everything must keep working under `permissions: {}`.
 - **Escape label-derived output.** Any label-derived string printed as part of
   a workflow command (`::error::`, `::warning::`) must go through `escapeData()`
-  so it stays on a single log line.
+  so it stays on a single log line. Escape once, at the point the workflow
+  command is written — never pre-escape a string that the entrypoint will escape
+  again. Any label-derived string written to the optional step summary (a
+  markdown file, not a workflow command) goes through `escapeMarkdown()` instead,
+  so it stays inside a single, unbroken table cell.
+- **Separate the verdict from the side effects.** `runAction()` validates the
+  configuration (via `resolveConfiguration()`) and evaluates the labels, then
+  **returns** a result object whose `failureMessage` is `null` on success or the
+  failure text when the check fails. It performs no file writes and does not
+  throw for a failed check. The root `main()` owns every side effect: it writes
+  the step summary, prints the `::error::` annotation, and sets
+  `process.exitCode`.
 - **Report failure via exit code, with the `ActionError` convention**: raise
-  intentional failures (invalid configuration or input) as `ActionError`
-  instances inside `runAction()` — the `ActionError` class is defined in
-  `action.js` and exported alongside `runAction`. The entrypoint catches
-  everything and sets `process.exitCode = 1`; the action has no outputs. For an
-  `ActionError` it prints the escaped message via `::error::${escapeData(err.message)}`;
-  for any other (unexpected) error it deliberately prints a generic
-  `::error::Unknown error`, withholding the message rather than leaking internal
-  detail.
+  intentional failures for **invalid configuration or input** as `ActionError`
+  instances (in `resolveConfiguration()` and the `resolve*` helpers it calls) —
+  the `ActionError` class is defined in `action.js` and exported alongside
+  `runAction` and `main`. `runAction()` itself never throws for a failed check;
+  it returns the `failureMessage`, and `main()` raises that as an `ActionError`
+  once the summary has been written, so every failure is reported through a
+  single path. That path is `main()`'s catch: it sets `process.exitCode = 1` (the
+  action has no outputs) and, for an `ActionError`, prints the escaped message via
+  `::error::${escapeData(err.message)}`; for any other (unexpected) error it
+  deliberately prints a generic `::error::Unknown error`, withholding the message
+  rather than leaking internal detail.
 - **Node 24 / CommonJS.** Match the declared runtime in `action.yml`; use
   `require()`, not ESM imports.
 - **Comments are the exception, not the default.** Do not comment what names,
@@ -69,6 +84,18 @@ This is exactly what CI runs. Tests mock `node:fs` and set env vars via the
 `stubEvent()` helper in `action.test.js`; mocks and env are restored in
 `afterEach`. New behavior in `action.js` needs matching coverage in
 `action.test.js`, including failure branches.
+
+The generated step summaries are covered by snapshots in
+`action.test.js.snapshot`, stored verbatim so the file reads as the rendered
+markdown. It is committed and CI verifies against it. After an intentional change
+to the summary output, regenerate it and read the diff before committing:
+
+    node --test --test-update-snapshots
+
+Never regenerate to make a red test pass without checking the diff — a few
+summary tests keep explicit assertions next to the snapshot (no raw `|` in a
+cell, no row broken across lines) precisely so an escaping regression cannot be
+absorbed by a blind refresh.
 
 ## Workflow / CI conventions
 

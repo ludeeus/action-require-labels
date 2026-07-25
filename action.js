@@ -5,14 +5,10 @@ const fs = require("node:fs")
 class ActionError extends Error {}
 
 const runAction = () => {
-    const { eventData, requiredLabels, maximumMatchingLabelsCount } = resolveConfiguration()
+    const { eventData, requiredLabels, maximumMatchingLabelsCount, summaryMode } = resolveConfiguration()
     const requiredLabelsList = Array.from(requiredLabels).join(", ")
 
-    if (!eventData.pull_request.labels || eventData.pull_request.labels.length === 0) {
-        throw new ActionError(`No labels defined on the pull request. Required labels: ${requiredLabelsList}.`)
-    }
-
-    const prLabels = eventData.pull_request.labels.map(label => label.name)
+    const prLabels = (eventData.pull_request.labels || []).map(label => label.name)
 
     console.log(`Required labels (${escapeData(requiredLabelsList)})`)
     console.log(`Pull request labels (${escapeData(prLabels.join(", "))})`)
@@ -20,13 +16,22 @@ const runAction = () => {
     const matchingLabels = prLabels.filter(label => requiredLabels.has(label))
     console.log(`Found ${matchingLabels.length} matching label(s) on the pull request (${escapeData(matchingLabels.join(", "))})`)
 
-    if (matchingLabels.length === 0) {
-        throw new ActionError(`No matching required labels found. Required labels: ${requiredLabelsList}.`)
-    }
+    const failureMessage = resolveFailureMessage({ requiredLabelsList, prLabels, matchingLabels, maximumMatchingLabelsCount })
 
-    if (matchingLabels.length > maximumMatchingLabelsCount) {
-        throw new ActionError(`Found ${matchingLabels.length} matching label(s), but a maximum of ${maximumMatchingLabelsCount} is allowed.`)
+    return { summaryMode, requiredLabels, prLabels, matchingLabels, maximumMatchingLabelsCount, failureMessage }
+}
+
+const resolveFailureMessage = ({ requiredLabelsList, prLabels, matchingLabels, maximumMatchingLabelsCount }) => {
+    if (prLabels.length === 0) {
+        return `No labels defined on the pull request. Required labels: ${requiredLabelsList}.`
     }
+    if (matchingLabels.length === 0) {
+        return `No matching required labels found. Required labels: ${requiredLabelsList}.`
+    }
+    if (matchingLabels.length > maximumMatchingLabelsCount) {
+        return `Found ${matchingLabels.length} matching label(s), but a maximum of ${maximumMatchingLabelsCount} is allowed.`
+    }
+    return null
 }
 
 const resolveConfiguration = () => {
@@ -44,8 +49,9 @@ const resolveConfiguration = () => {
 
     const requiredLabels = resolveRequiredLabels()
     const maximumMatchingLabelsCount = resolveMaximumMatchingLabelsCount(requiredLabels.size)
+    const summaryMode = resolveSummaryMode()
 
-    return { eventData, requiredLabels, maximumMatchingLabelsCount }
+    return { eventData, requiredLabels, maximumMatchingLabelsCount, summaryMode }
 }
 
 const resolveRequiredLabels = () => {
@@ -90,9 +96,90 @@ const escapeData = (data) => {
     return data.replace(/%/g, "%25").replace(/\r/g, "%0D").replace(/\n/g, "%0A")
 }
 
-if (require.main === module) {
+const SUMMARY_MODES = {
+    never: null,
+    always: { errorOnly: false, minimal: false },
+    error: { errorOnly: true, minimal: false },
+    minimal: { errorOnly: false, minimal: true },
+    minimal_error: { errorOnly: true, minimal: true },
+}
+
+const resolveSummaryMode = () => {
+    const name = (process.env.INPUT_SUMMARY || "").trim().toLowerCase() || "never"
+    if (!Object.hasOwn(SUMMARY_MODES, name)) {
+        throw new ActionError(`summary must be one of: ${Object.keys(SUMMARY_MODES).join(", ")}.`)
+    }
+    return SUMMARY_MODES[name]
+}
+
+const shouldWriteSummary = (mode, failed) => mode !== null && (!mode.errorOnly || failed)
+
+// CommonMark counts a lone carriage return as a line ending, not just CRLF and
+// LF, so every variant has to collapse or the value escapes its row.
+const collapseLineEndings = (text) => text.replace(/\r\n|[\r\n]/g, " ")
+
+// Keeps a label-derived value on a single line and rendering as literal text.
+// The value is only ever embedded mid-line, so characters that are markup solely
+// at the start of a line (`#`, `-`, `1.`) cannot take effect and are left alone;
+// everything that can open an inline construct is escaped.
+const escapeMarkdown = (text) => collapseLineEndings(text.replace(/[\\`*_[\]<>&~|]/g, "\\$&"))
+
+// Renders a label as a markdown code span. A backslash cannot escape a backtick
+// inside a code span, so the fence is widened past the longest backtick run
+// instead. GFM does resolve `\|` while splitting table cells, so the pipe is
+// escaped there — and a literal backslash is doubled first, otherwise a backslash
+// immediately before a pipe would consume that escape and leave the delimiter
+// bare, breaking the row.
+const asCodeSpan = (label) => {
+    const content = collapseLineEndings(label.replace(/\\/g, "\\\\").replace(/\|/g, "\\|"))
+    const backtickRuns = Array.from(content.matchAll(/`+/g), (match) => match[0].length)
+    const fence = "`".repeat(Math.max(0, ...backtickRuns) + 1)
+    const padding = content.startsWith("`") || content.endsWith("`") ? " " : ""
+    return `${fence}${padding}${content}${padding}${fence}`
+}
+
+const DOCUMENTATION_LINK = "[ludeeus/action-require-labels documentation](https://github.com/ludeeus/action-require-labels#readme)"
+
+const buildSummary = ({ requiredLabels, prLabels, matchingLabels, maximumMatchingLabelsCount, failureMessage, minimal }) => {
+    const labelCell = (labels) => labels.length === 0 ? "_(none)_" : labels.map(asCodeSpan).join(", ")
+    const capNote = maximumMatchingLabelsCount < requiredLabels.size ? ` (max ${maximumMatchingLabelsCount} allowed)` : ""
+    const statusLine = failureMessage
+        ? `❌ **Failed** — ${escapeMarkdown(failureMessage)}`
+        : `✅ **Passed** — ${matchingLabels.length} of ${requiredLabels.size} required labels present${capNote}.`
+
+    const table = minimal ? [] : [
+        "| Group | Labels |",
+        "| --- | --- |",
+        `| Required | ${labelCell(Array.from(requiredLabels))} |`,
+        `| Present | ${labelCell(prLabels)} |`,
+        `| Matched | ${labelCell(matchingLabels)} |`,
+        "",
+        DOCUMENTATION_LINK,
+        "",
+    ]
+
+    return ["## Required labels", "", statusLine, "", ...table].join("\n")
+}
+
+// Owns the whole decision, so the mode is never dereferenced for a run that
+// writes nothing — `never` resolves to a null mode.
+const writeSummary = (result) => {
+    const summaryPath = process.env.GITHUB_STEP_SUMMARY
+    if (!summaryPath || !shouldWriteSummary(result.summaryMode, result.failureMessage !== null)) {
+        return
+    }
+    fs.appendFileSync(summaryPath, buildSummary({ ...result, minimal: result.summaryMode.minimal }))
+}
+
+const main = () => {
     try {
-        runAction()
+        const result = runAction()
+
+        writeSummary(result)
+
+        if (result.failureMessage) {
+            throw new ActionError(result.failureMessage)
+        }
     } catch (err) {
         if (err instanceof ActionError) {
             console.log(`::error::${escapeData(err.message)}`)
@@ -103,4 +190,8 @@ if (require.main === module) {
     }
 }
 
-module.exports = { runAction, ActionError }
+if (require.main === module) {
+    main()
+}
+
+module.exports = { runAction, main, ActionError }

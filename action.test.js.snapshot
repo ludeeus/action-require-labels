@@ -1,0 +1,207 @@
+exports[`\"always\" writes a failing summary and still exits non-zero 1`] = `
+## Required labels
+
+❌ **Failed** — No matching required labels found. Required labels: bugfix, breaking-change.
+
+| Group | Labels |
+| --- | --- |
+| Required | \`bugfix\`, \`breaking-change\` |
+| Present | \`documentation\` |
+| Matched | _(none)_ |
+
+[ludeeus/action-require-labels documentation](https://github.com/ludeeus/action-require-labels#readme)
+
+`;
+
+exports[`\"always\" writes a passing summary with the three label groups 1`] = `
+## Required labels
+
+✅ **Passed** — 1 of 3 required labels present.
+
+| Group | Labels |
+| --- | --- |
+| Required | \`bugfix\`, \`breaking-change\`, \`new-feature\` |
+| Present | \`bugfix\`, \`question\` |
+| Matched | \`bugfix\` |
+
+[ludeeus/action-require-labels documentation](https://github.com/ludeeus/action-require-labels#readme)
+
+`;
+
+exports[`\"always\" writes an empty Present group when the pull request has no labels 1`] = `
+## Required labels
+
+❌ **Failed** — No labels defined on the pull request. Required labels: bugfix, breaking-change.
+
+| Group | Labels |
+| --- | --- |
+| Required | \`bugfix\`, \`breaking-change\` |
+| Present | _(none)_ |
+| Matched | _(none)_ |
+
+[ludeeus/action-require-labels documentation](https://github.com/ludeeus/action-require-labels#readme)
+
+`;
+
+exports[`\"always\" writes the summary for the maximum_matching_labels failure 1`] = `
+## Required labels
+
+❌ **Failed** — Found 2 matching label(s), but a maximum of 1 is allowed.
+
+| Group | Labels |
+| --- | --- |
+| Required | \`bugfix\`, \`breaking-change\`, \`new-feature\` |
+| Present | \`bugfix\`, \`new-feature\` |
+| Matched | \`bugfix\`, \`new-feature\` |
+
+[ludeeus/action-require-labels documentation](https://github.com/ludeeus/action-require-labels#readme)
+
+`;
+
+exports[`\"error\" writes the full table on a failing run 1`] = `
+## Required labels
+
+❌ **Failed** — No matching required labels found. Required labels: bugfix, breaking-change.
+
+| Group | Labels |
+| --- | --- |
+| Required | \`bugfix\`, \`breaking-change\` |
+| Present | \`documentation\` |
+| Matched | _(none)_ |
+
+[ludeeus/action-require-labels documentation](https://github.com/ludeeus/action-require-labels#readme)
+
+`;
+
+exports[`\"minimal\" writes only the status line on a passing run 1`] = `
+## Required labels
+
+✅ **Passed** — 1 of 3 required labels present.
+
+`;
+
+exports[`\"minimal\" writes the status line on a failing run 1`] = `
+## Required labels
+
+❌ **Failed** — No matching required labels found. Required labels: bugfix, breaking-change.
+
+`;
+
+exports[`\"minimal_error\" writes only the status line on a failing run 1`] = `
+## Required labels
+
+❌ **Failed** — No matching required labels found. Required labels: bugfix, breaking-change.
+
+`;
+
+exports[`escapes markdown metacharacters in the failing status line 1`] = `
+## Required labels
+
+❌ **Failed** — No matching required labels found. Required labels: \\*bold\\*, \\_em\\_, \\[link\\](http://example.com), \\<b\\>html\\</b\\>, a\\&b, \\~strike\\~.
+
+| Group | Labels |
+| --- | --- |
+| Required | \`*bold*\`, \`_em_\`, \`[link](http://example.com)\`, \`<b>html</b>\`, \`a&b\`, \`~strike~\` |
+| Present | \`question\` |
+| Matched | _(none)_ |
+
+[ludeeus/action-require-labels documentation](https://github.com/ludeeus/action-require-labels#readme)
+
+`;
+
+exports[`escapes markdown-breaking characters in label names within the summary 1`] = `
+## Required labels
+
+✅ **Passed** — 1 of 1 required labels present.
+
+| Group | Labels |
+| --- | --- |
+| Required | \`\`a\\|b\`c d\`\` |
+| Present | \`\`a\\|b\`c d\`\` |
+| Matched | \`\`a\\|b\`c d\`\` |
+
+[ludeeus/action-require-labels documentation](https://github.com/ludeeus/action-require-labels#readme)
+
+`;
+
+exports[`keeps a label with a backslash before a pipe inside a single cell 1`] = `
+## Required labels
+
+✅ **Passed** — 1 of 1 required labels present.
+
+| Group | Labels |
+| --- | --- |
+| Required | \`a\\\\\\|b\` |
+| Present | \`a\\\\\\|b\` |
+| Matched | \`a\\\\\\|b\` |
+
+[ludeeus/action-require-labels documentation](https://github.com/ludeeus/action-require-labels#readme)
+
+`;
+
+exports[`links the full summary to the documentation 1`] = `
+## Required labels
+
+✅ **Passed** — 1 of 2 required labels present.
+
+| Group | Labels |
+| --- | --- |
+| Required | \`bugfix\`, \`breaking-change\` |
+| Present | \`bugfix\` |
+| Matched | \`bugfix\` |
+
+[ludeeus/action-require-labels documentation](https://github.com/ludeeus/action-require-labels#readme)
+
+`;
+
+exports[`omits the cap from the passing summary when it uses the default 1`] = `
+## Required labels
+
+✅ **Passed** — 1 of 3 required labels present.
+
+| Group | Labels |
+| --- | --- |
+| Required | \`bugfix\`, \`breaking-change\`, \`new-feature\` |
+| Present | \`bugfix\` |
+| Matched | \`bugfix\` |
+
+[ludeeus/action-require-labels documentation](https://github.com/ludeeus/action-require-labels#readme)
+
+`;
+
+exports[`omits the docs link from the minimal summary 1`] = `
+## Required labels
+
+✅ **Passed** — 1 of 2 required labels present.
+
+`;
+
+exports[`pads the code span when a label starts or ends with a backtick 1`] = `
+## Required labels
+
+✅ **Passed** — 1 of 1 required labels present.
+
+| Group | Labels |
+| --- | --- |
+| Required | \`\` \`wip\` \`\` |
+| Present | \`\` \`wip\` \`\` |
+| Matched | \`\` \`wip\` \`\` |
+
+[ludeeus/action-require-labels documentation](https://github.com/ludeeus/action-require-labels#readme)
+
+`;
+
+exports[`shows the cap in the passing summary only when it constrains 1`] = `
+## Required labels
+
+✅ **Passed** — 1 of 3 required labels present (max 1 allowed).
+
+| Group | Labels |
+| --- | --- |
+| Required | \`p1\`, \`p2\`, \`p3\` |
+| Present | \`p1\` |
+| Matched | \`p1\` |
+
+[ludeeus/action-require-labels documentation](https://github.com/ludeeus/action-require-labels#readme)
+
+`;
