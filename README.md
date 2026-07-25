@@ -55,8 +55,6 @@ The full summary is a table listing the **required**, **present**, and **matched
 | `minimal` | Write only the pass/fail status line (no table) on every run. |
 | `minimal_error` | Write only the pass/fail status line (no table), and only when the check fails. |
 
-The full-table modes (`always`, `error`) also link to this documentation for the action version in use. The value is matched case-insensitively; any other value fails the action. This input has no effect on whether the check itself passes or fails.
-
 ## Behavior
 
 The result is communicated through the step's success or failure; the action has no outputs. Depending on [`summary`](#summary), it can additionally write a summary of the required, present, and matched labels to the run's step summary.
