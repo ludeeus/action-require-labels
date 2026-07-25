@@ -651,6 +651,24 @@ test("escapes markdown metacharacters in the failing status line", (t) => {
     t.assert.snapshot(writes[0].data);
 });
 
+test("keeps a label with a backslash before a pipe inside a single cell", (t) => {
+    stubEvent({
+        event: { pull_request: { labels: [{ name: "a\\|b" }] } },
+        inputLabels: "a\\|b",
+        summary: "always",
+        stepSummaryPath: "/mock/summary.md",
+    });
+    const writes = captureSummary();
+
+    main();
+
+    const row = writes[0].data.split("\n").find(line => line.startsWith("| Required"));
+    // Doubling the backslash keeps the label's pipe escaped, so only the three
+    // cell delimiters remain unescaped and the row cannot split.
+    assert.equal(row.match(/(?<!\\)\|/g).length, 3);
+    t.assert.snapshot(writes[0].data);
+});
+
 test("pads the code span when a label starts or ends with a backtick", (t) => {
     stubEvent({
         event: { pull_request: { labels: [{ name: "`wip`" }] } },

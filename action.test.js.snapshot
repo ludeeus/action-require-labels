@@ -110,6 +110,19 @@ exports[`escapes markdown-breaking characters in label names within the summary 
 
 `;
 
+exports[`keeps a label with a backslash before a pipe inside a single cell 1`] = `
+## Required labels
+
+✅ **Passed** — 1 of 1 required labels present.
+
+| Group | Labels |
+| --- | --- |
+| Required | \`a\\\\\\|b\` |
+| Present | \`a\\\\\\|b\` |
+| Matched | \`a\\\\\\|b\` |
+
+`;
+
 exports[`links the full summary to the docs for the action ref in use 1`] = `
 ## Required labels
 

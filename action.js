@@ -122,10 +122,12 @@ const escapeMarkdown = (text) => text
     .replace(/[\\`*_[\]<>&~|]/g, "\\$&")
     .replace(/\r?\n/g, " ")
 
-// Renders a label as a markdown code span. A backslash is literal inside a code
-// span, so a backtick in the label cannot be escaped — the fence is widened past
-// the longest backtick run instead. GFM still requires escaping the table's own
-// pipe delimiter, even within a code span.
+// Renders a label as a markdown code span. A backslash cannot escape a backtick
+// inside a code span, so the fence is widened past the longest backtick run
+// instead. GFM does resolve `\|` while splitting table cells, so the pipe is
+// escaped there — and a literal backslash is doubled first, otherwise a backslash
+// immediately before a pipe would consume that escape and leave the delimiter
+// bare, breaking the row.
 const asCodeSpan = (label) => {
     const content = label.replace(/\\/g, "\\\\").replace(/\|/g, "\\|").replace(/\r?\n/g, " ")
     const backtickRuns = Array.from(content.matchAll(/`+/g), (match) => match[0].length)
