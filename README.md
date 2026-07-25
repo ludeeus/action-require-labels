@@ -57,7 +57,9 @@ The full summary is a table listing the **required**, **present**, and **matched
 
 ## Behavior
 
-The result is communicated through the step's success or failure; the action has no outputs. Depending on [`summary`](#summary), it can additionally write a summary of the required, present, and matched labels to the run's step summary.
+The result is communicated through the step's success or failure; the action has no outputs.
+
+If the [`summary`](#summary) option is set, the action can additionally provide a step summary — see that option for the available modes.
 
 The step **passes** when the pull request has at least one of the configured labels.
 
