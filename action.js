@@ -126,7 +126,7 @@ const escapeMarkdown = (text) => text
 // the longest backtick run instead. GFM still requires escaping the table's own
 // pipe delimiter, even within a code span.
 const asCodeSpan = (label) => {
-    const content = label.replace(/\|/g, "\\|").replace(/\r?\n/g, " ")
+    const content = label.replace(/\\/g, "\\\\").replace(/\|/g, "\\|").replace(/\r?\n/g, " ")
     const backtickRuns = Array.from(content.matchAll(/`+/g), (match) => match[0].length)
     const fence = "`".repeat(Math.max(0, ...backtickRuns) + 1)
     const padding = content.startsWith("`") || content.endsWith("`") ? " " : ""
