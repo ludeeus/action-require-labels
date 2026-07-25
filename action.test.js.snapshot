@@ -132,7 +132,7 @@ exports[`omits the docs link from the minimal summary even when the ref is set 1
 
 `;
 
-exports[`omits the docs link when the action repository and ref are unset 1`] = `
+exports[`omits the docs link when the action ref is unset 1`] = `
 ## Required labels
 
 ✅ **Passed** — 1 of 2 required labels present.

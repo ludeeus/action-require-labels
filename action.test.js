@@ -24,7 +24,6 @@ function stubEvent(opts = {}) {
     const maximumMatchingLabels = "maximumMatchingLabels" in opts ? opts.maximumMatchingLabels : undefined;
     const summary = "summary" in opts ? opts.summary : undefined;
     const stepSummaryPath = "stepSummaryPath" in opts ? opts.stepSummaryPath : undefined;
-    const actionRepository = "actionRepository" in opts ? opts.actionRepository : undefined;
     const actionRef = "actionRef" in opts ? opts.actionRef : undefined;
 
     mock.method(fs, "existsSync", () => exists);
@@ -60,12 +59,6 @@ function stubEvent(opts = {}) {
         process.env.GITHUB_STEP_SUMMARY = stepSummaryPath;
     }
 
-    if (actionRepository === undefined) {
-        delete process.env.GITHUB_ACTION_REPOSITORY;
-    } else {
-        process.env.GITHUB_ACTION_REPOSITORY = actionRepository;
-    }
-
     if (actionRef === undefined) {
         delete process.env.GITHUB_ACTION_REF;
     } else {
@@ -93,7 +86,6 @@ afterEach(() => {
     delete process.env.INPUT_MAXIMUM_MATCHING_LABELS;
     delete process.env.INPUT_SUMMARY;
     delete process.env.GITHUB_STEP_SUMMARY;
-    delete process.env.GITHUB_ACTION_REPOSITORY;
     delete process.env.GITHUB_ACTION_REF;
     // main() sets process.exitCode on failure; restore it so a failing-run test
     // cannot make the test runner itself exit non-zero.
@@ -644,7 +636,6 @@ test("links the full summary to the docs for the action ref in use", (t) => {
         inputLabels: "bugfix,breaking-change",
         summary: "always",
         stepSummaryPath: "/mock/summary.md",
-        actionRepository: "ludeeus/action-require-labels",
         actionRef: "2.0.0",
     });
     const writes = captureSummary();
@@ -654,7 +645,7 @@ test("links the full summary to the docs for the action ref in use", (t) => {
     t.assert.snapshot(writes[0].data);
 });
 
-test("omits the docs link when the action repository and ref are unset", (t) => {
+test("omits the docs link when the action ref is unset", (t) => {
     stubEvent({
         event: { pull_request: { labels: [{ name: "bugfix" }] } },
         inputLabels: "bugfix,breaking-change",
@@ -675,7 +666,6 @@ test("omits the docs link from the minimal summary even when the ref is set", (t
         inputLabels: "bugfix,breaking-change",
         summary: "minimal",
         stepSummaryPath: "/mock/summary.md",
-        actionRepository: "ludeeus/action-require-labels",
         actionRef: "2.0.0",
     });
     const writes = captureSummary();

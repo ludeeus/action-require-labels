@@ -133,16 +133,17 @@ const asCodeSpan = (label) => {
     return `${fence}${padding}${content}${padding}${fence}`
 }
 
-// The action's own repository and ref (tag/branch/SHA) from `uses:`, so the
-// summary links to the documentation matching the version in use. Both are
-// unset for a local action (`uses: ./`), where no link is rendered.
+const ACTION_REPOSITORY = "ludeeus/action-require-labels"
+
+// GITHUB_ACTION_REF is the ref (tag/branch/SHA) this action was resolved from in
+// `uses:`, so the summary links to the documentation matching the version in
+// use. It is unset for a local action (`uses: ./`), where no link is rendered.
 const resolveDocumentationLink = () => {
-    const repository = process.env.GITHUB_ACTION_REPOSITORY
     const ref = process.env.GITHUB_ACTION_REF
-    if (!repository || !ref) {
+    if (!ref) {
         return null
     }
-    return `[${repository}@${ref} documentation](https://github.com/${repository}/blob/${ref}/README.md)`
+    return `[${ACTION_REPOSITORY}@${ref} documentation](https://github.com/${ACTION_REPOSITORY}/blob/${ref}/README.md)`
 }
 
 const buildSummary = ({ requiredLabels, prLabels, matchingLabels, maximumMatchingLabelsCount, failureMessage, minimal, documentationLink }) => {
