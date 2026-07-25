@@ -84,6 +84,19 @@ exports[`\"minimal_error\" writes only the status line on a failing run 1`] = `
 
 `;
 
+exports[`escapes markdown metacharacters in the failing status line 1`] = `
+## Required labels
+
+❌ **Failed** — No matching required labels found. Required labels: \\*bold\\*, \\_em\\_, \\[link\\](http://example.com), \\<b\\>html\\</b\\>, a\\&b, \\~strike\\~.
+
+| Group | Labels |
+| --- | --- |
+| Required | \`*bold*\`, \`_em_\`, \`[link](http://example.com)\`, \`<b>html</b>\`, \`a&b\`, \`~strike~\` |
+| Present | \`question\` |
+| Matched | _(none)_ |
+
+`;
+
 exports[`escapes markdown-breaking characters in label names within the summary 1`] = `
 ## Required labels
 

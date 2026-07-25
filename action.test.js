@@ -630,6 +630,27 @@ test("escapes markdown-breaking characters in label names within the summary", (
     t.assert.snapshot(written);
 });
 
+test("escapes markdown metacharacters in the failing status line", (t) => {
+    stubEvent({
+        event: { pull_request: { labels: [{ name: "question" }] } },
+        inputLabels: "*bold*,_em_,[link](http://example.com),<b>html</b>,a&b,~strike~",
+        summary: "always",
+        stepSummaryPath: "/mock/summary.md",
+    });
+    const writes = captureSummary();
+
+    main();
+
+    const statusLine = writes[0].data.split("\n").find(line => line.startsWith("❌"));
+    // Every inline construct the label names could open must arrive escaped, so
+    // the status line renders the label text literally.
+    for (const metacharacter of ["*", "_", "[", "]", "<", ">", "&", "~"]) {
+        assert.ok(!statusLine.includes(metacharacter) || statusLine.includes(`\\${metacharacter}`));
+    }
+    assert.doesNotMatch(statusLine, /\[link\]\(/);
+    t.assert.snapshot(writes[0].data);
+});
+
 test("pads the code span when a label starts or ends with a backtick", (t) => {
     stubEvent({
         event: { pull_request: { labels: [{ name: "`wip`" }] } },

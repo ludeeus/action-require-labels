@@ -114,11 +114,12 @@ const resolveSummaryMode = () => {
 
 const shouldWriteSummary = (mode, failed) => mode !== null && (!mode.errorOnly || failed)
 
-// Keeps a label-derived value inside a single, unbroken markdown table cell.
+// Keeps a label-derived value on a single line and rendering as literal text.
+// The value is only ever embedded mid-line, so characters that are markup solely
+// at the start of a line (`#`, `-`, `1.`) cannot take effect and are left alone;
+// everything that can open an inline construct is escaped.
 const escapeMarkdown = (text) => text
-    .replace(/\\/g, "\\\\")
-    .replace(/`/g, "\\`")
-    .replace(/\|/g, "\\|")
+    .replace(/[\\`*_[\]<>&~|]/g, "\\$&")
     .replace(/\r?\n/g, " ")
 
 // Renders a label as a markdown code span. A backslash is literal inside a code
