@@ -170,3 +170,16 @@ exports[`shows the cap in the passing summary only when it constrains 1`] = `
 | Matched | \`p1\` |
 
 `;
+
+exports[`writes the full table on a failing run when the input is unset (defaults to error) 1`] = `
+## Required labels
+
+❌ **Failed** — No matching required labels found. Required labels: bugfix, breaking-change.
+
+| Group | Labels |
+| --- | --- |
+| Required | \`bugfix\`, \`breaking-change\` |
+| Present | \`documentation\` |
+| Matched | _(none)_ |
+
+`;

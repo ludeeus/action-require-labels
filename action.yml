@@ -10,11 +10,12 @@ inputs:
   summary:
     description: >-
       When to write a summary of the required, present, and matched labels to
-      the GitHub step summary. One of: never (default), always (full table on
-      every run), error (full table only on failure), minimal (status line
-      only, on every run), minimal_error (status line only, only on failure).
+      the GitHub step summary. One of: error (default, full table only on
+      failure), always (full table on every run), minimal (status line only, on
+      every run), minimal_error (status line only, only on failure), never (no
+      summary).
     required: false
-    default: 'never'
+    default: 'error'
 runs:
   using: 'node24'
   main: 'action.js'

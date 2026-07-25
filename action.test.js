@@ -374,13 +374,28 @@ test("main() withholds the message for an unexpected error", () => {
     assert.ok(!logged.some(line => typeof line === "string" && line.includes("not json")));
 });
 
-test("does not write a summary when the input is unset (defaults to never)", () => {
+test("does not write a summary on a passing run when the input is unset (defaults to error)", () => {
     stubEvent({ stepSummaryPath: "/mock/summary.md" });
     const writes = captureSummary();
 
     main();
 
     assert.equal(writes.length, 0);
+});
+
+test("writes the full table on a failing run when the input is unset (defaults to error)", (t) => {
+    stubEvent({
+        event: { pull_request: { labels: [{ name: "documentation" }] } },
+        inputLabels: "bugfix,breaking-change",
+        stepSummaryPath: "/mock/summary.md",
+    });
+    const writes = captureSummary();
+
+    main();
+
+    assert.equal(process.exitCode, 1);
+    assert.equal(writes.length, 1);
+    t.assert.snapshot(writes[0].data);
 });
 
 test("does not write a summary when the mode is \"never\"", () => {
