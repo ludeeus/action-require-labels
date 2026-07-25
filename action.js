@@ -161,9 +161,11 @@ const buildSummary = ({ requiredLabels, prLabels, matchingLabels, maximumMatchin
     return ["## Required labels", "", statusLine, "", ...table].join("\n")
 }
 
+// Owns the whole decision, so the mode is never dereferenced for a run that
+// writes nothing — `never` resolves to a null mode.
 const writeSummary = (result) => {
     const summaryPath = process.env.GITHUB_STEP_SUMMARY
-    if (!summaryPath) {
+    if (!summaryPath || !shouldWriteSummary(result.summaryMode, result.failureMessage !== null)) {
         return
     }
     fs.appendFileSync(summaryPath, buildSummary({ ...result, minimal: result.summaryMode.minimal }))
@@ -173,9 +175,7 @@ const main = () => {
     try {
         const result = runAction()
 
-        if (shouldWriteSummary(result.summaryMode, result.failureMessage !== null)) {
-            writeSummary(result)
-        }
+        writeSummary(result)
 
         if (result.failureMessage) {
             throw new ActionError(result.failureMessage)

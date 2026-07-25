@@ -634,12 +634,15 @@ test("escapes markdown metacharacters in the failing status line", (t) => {
     main();
 
     const statusLine = writes[0].data.split("\n").find(line => line.startsWith("❌"));
-    // Every inline construct the label names could open must arrive escaped, so
-    // the status line renders the label text literally.
+    // Assert against the label-derived message only, with the action's own bold
+    // prefix removed. Not one occurrence may reach it unescaped, so this checks
+    // for the absence of an unescaped metacharacter rather than the presence of
+    // an escaped one -- the latter passes while a second occurrence still leaks.
+    const message = statusLine.replace(/^❌ \*\*Failed\*\* — /, "");
     for (const metacharacter of ["*", "_", "[", "]", "<", ">", "&", "~"]) {
-        assert.ok(!statusLine.includes(metacharacter) || statusLine.includes(`\\${metacharacter}`));
+        assert.doesNotMatch(message, new RegExp(`(?<!\\\\)\\${metacharacter}`));
     }
-    assert.doesNotMatch(statusLine, /\[link\]\(/);
+    assert.doesNotMatch(message, /\[link\]\(/);
     t.assert.snapshot(writes[0].data);
 });
 
