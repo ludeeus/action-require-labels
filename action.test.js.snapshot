@@ -9,6 +9,8 @@ exports[`\"always\" writes a failing summary and still exits non-zero 1`] = `
 | Present | \`documentation\` |
 | Matched | _(none)_ |
 
+[ludeeus/action-require-labels documentation](https://github.com/ludeeus/action-require-labels#readme)
+
 `;
 
 exports[`\"always\" writes a passing summary with the three label groups 1`] = `
@@ -21,6 +23,8 @@ exports[`\"always\" writes a passing summary with the three label groups 1`] = `
 | Required | \`bugfix\`, \`breaking-change\`, \`new-feature\` |
 | Present | \`bugfix\`, \`question\` |
 | Matched | \`bugfix\` |
+
+[ludeeus/action-require-labels documentation](https://github.com/ludeeus/action-require-labels#readme)
 
 `;
 
@@ -35,6 +39,8 @@ exports[`\"always\" writes an empty Present group when the pull request has no l
 | Present | _(none)_ |
 | Matched | _(none)_ |
 
+[ludeeus/action-require-labels documentation](https://github.com/ludeeus/action-require-labels#readme)
+
 `;
 
 exports[`\"always\" writes the summary for the maximum_matching_labels failure 1`] = `
@@ -48,6 +54,8 @@ exports[`\"always\" writes the summary for the maximum_matching_labels failure 1
 | Present | \`bugfix\`, \`new-feature\` |
 | Matched | \`bugfix\`, \`new-feature\` |
 
+[ludeeus/action-require-labels documentation](https://github.com/ludeeus/action-require-labels#readme)
+
 `;
 
 exports[`\"error\" writes the full table on a failing run 1`] = `
@@ -60,6 +68,8 @@ exports[`\"error\" writes the full table on a failing run 1`] = `
 | Required | \`bugfix\`, \`breaking-change\` |
 | Present | \`documentation\` |
 | Matched | _(none)_ |
+
+[ludeeus/action-require-labels documentation](https://github.com/ludeeus/action-require-labels#readme)
 
 `;
 
@@ -95,6 +105,8 @@ exports[`escapes markdown metacharacters in the failing status line 1`] = `
 | Present | \`question\` |
 | Matched | _(none)_ |
 
+[ludeeus/action-require-labels documentation](https://github.com/ludeeus/action-require-labels#readme)
+
 `;
 
 exports[`escapes markdown-breaking characters in label names within the summary 1`] = `
@@ -107,6 +119,8 @@ exports[`escapes markdown-breaking characters in label names within the summary 
 | Required | \`\`a\\|b\`c d\`\` |
 | Present | \`\`a\\|b\`c d\`\` |
 | Matched | \`\`a\\|b\`c d\`\` |
+
+[ludeeus/action-require-labels documentation](https://github.com/ludeeus/action-require-labels#readme)
 
 `;
 
@@ -121,9 +135,11 @@ exports[`keeps a label with a backslash before a pipe inside a single cell 1`] =
 | Present | \`a\\\\\\|b\` |
 | Matched | \`a\\\\\\|b\` |
 
+[ludeeus/action-require-labels documentation](https://github.com/ludeeus/action-require-labels#readme)
+
 `;
 
-exports[`links the full summary to the docs for the action ref in use 1`] = `
+exports[`links the full summary to the documentation 1`] = `
 ## Required labels
 
 ✅ **Passed** — 1 of 2 required labels present.
@@ -134,7 +150,7 @@ exports[`links the full summary to the docs for the action ref in use 1`] = `
 | Present | \`bugfix\` |
 | Matched | \`bugfix\` |
 
-[ludeeus/action-require-labels@2.0.0 documentation](https://github.com/ludeeus/action-require-labels/blob/2.0.0/README.md)
+[ludeeus/action-require-labels documentation](https://github.com/ludeeus/action-require-labels#readme)
 
 `;
 
@@ -149,25 +165,14 @@ exports[`omits the cap from the passing summary when it uses the default 1`] = `
 | Present | \`bugfix\` |
 | Matched | \`bugfix\` |
 
-`;
-
-exports[`omits the docs link from the minimal summary even when the ref is set 1`] = `
-## Required labels
-
-✅ **Passed** — 1 of 2 required labels present.
+[ludeeus/action-require-labels documentation](https://github.com/ludeeus/action-require-labels#readme)
 
 `;
 
-exports[`omits the docs link when the action ref is unset 1`] = `
+exports[`omits the docs link from the minimal summary 1`] = `
 ## Required labels
 
 ✅ **Passed** — 1 of 2 required labels present.
-
-| Group | Labels |
-| --- | --- |
-| Required | \`bugfix\`, \`breaking-change\` |
-| Present | \`bugfix\` |
-| Matched | \`bugfix\` |
 
 `;
 
@@ -182,6 +187,8 @@ exports[`pads the code span when a label starts or ends with a backtick 1`] = `
 | Present | \`\` \`wip\` \`\` |
 | Matched | \`\` \`wip\` \`\` |
 
+[ludeeus/action-require-labels documentation](https://github.com/ludeeus/action-require-labels#readme)
+
 `;
 
 exports[`shows the cap in the passing summary only when it constrains 1`] = `
@@ -194,5 +201,7 @@ exports[`shows the cap in the passing summary only when it constrains 1`] = `
 | Required | \`p1\`, \`p2\`, \`p3\` |
 | Present | \`p1\` |
 | Matched | \`p1\` |
+
+[ludeeus/action-require-labels documentation](https://github.com/ludeeus/action-require-labels#readme)
 
 `;
