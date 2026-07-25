@@ -105,7 +105,7 @@ const SUMMARY_MODES = {
 }
 
 const resolveSummaryMode = () => {
-    const name = (process.env.INPUT_SUMMARY || "").trim().toLowerCase() || "error"
+    const name = (process.env.INPUT_SUMMARY || "").trim().toLowerCase() || "never"
     if (!Object.hasOwn(SUMMARY_MODES, name)) {
         throw new ActionError(`summary must be one of: ${Object.keys(SUMMARY_MODES).join(", ")}.`)
     }

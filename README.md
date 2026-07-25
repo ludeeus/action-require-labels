@@ -49,11 +49,11 @@ The full summary is a table listing the **required**, **present**, and **matched
 
 | Value | Behavior |
 | --- | --- |
-| `error` | Write the full table only when the check fails — where it is most useful, since it shows which labels were present versus required. **Default.** |
+| `never` | Write nothing. **Default.** |
 | `always` | Write the full table on every run. |
+| `error` | Write the full table only when the check fails — where it is most useful, since it shows which labels were present versus required. |
 | `minimal` | Write only the pass/fail status line (no table) on every run. |
 | `minimal_error` | Write only the pass/fail status line (no table), and only when the check fails. |
-| `never` | Write nothing. |
 
 ## Behavior
 
