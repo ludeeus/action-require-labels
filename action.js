@@ -5,26 +5,27 @@ const fs = require("node:fs")
 class ActionError extends Error {}
 
 const runAction = () => {
-    const { eventData, requiredLabels, maximumMatchingLabels } = resolveConfiguration()
+    const { eventData, requiredLabels, maximumMatchingLabelsCount } = resolveConfiguration()
+    const requiredLabelsList = Array.from(requiredLabels).join(", ")
 
     if (!eventData.pull_request.labels || eventData.pull_request.labels.length === 0) {
-        throw new ActionError(`No labels defined on the pull request. Required labels: ${Array.from(requiredLabels).join(", ")}.`)
+        throw new ActionError(`No labels defined on the pull request. Required labels: ${requiredLabelsList}.`)
     }
 
     const prLabels = eventData.pull_request.labels.map(label => label.name)
 
-    console.log(`Required labels (${escapeData(Array.from(requiredLabels).join(", "))})`)
+    console.log(`Required labels (${escapeData(requiredLabelsList)})`)
     console.log(`Pull request labels (${escapeData(prLabels.join(", "))})`)
 
     const matchingLabels = prLabels.filter(label => requiredLabels.has(label))
     console.log(`Found ${matchingLabels.length} matching label(s) on the pull request (${escapeData(matchingLabels.join(", "))})`)
 
     if (matchingLabels.length === 0) {
-        throw new ActionError(`No matching required labels found. Required labels: ${Array.from(requiredLabels).join(", ")}.`)
+        throw new ActionError(`No matching required labels found. Required labels: ${requiredLabelsList}.`)
     }
 
-    if (matchingLabels.length > maximumMatchingLabels) {
-        throw new ActionError(`Found ${matchingLabels.length} matching label(s), but a maximum of ${maximumMatchingLabels} is allowed.`)
+    if (matchingLabels.length > maximumMatchingLabelsCount) {
+        throw new ActionError(`Found ${matchingLabels.length} matching label(s), but a maximum of ${maximumMatchingLabelsCount} is allowed.`)
     }
 }
 
@@ -42,9 +43,9 @@ const resolveConfiguration = () => {
     }
 
     const requiredLabels = resolveRequiredLabels()
-    const maximumMatchingLabels = resolveMaximumMatchingLabelsCount(requiredLabels.size)
+    const maximumMatchingLabelsCount = resolveMaximumMatchingLabelsCount(requiredLabels.size)
 
-    return { eventData, requiredLabels, maximumMatchingLabels }
+    return { eventData, requiredLabels, maximumMatchingLabelsCount }
 }
 
 const resolveRequiredLabels = () => {
