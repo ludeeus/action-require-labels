@@ -5,6 +5,31 @@ const fs = require("node:fs")
 class ActionError extends Error {}
 
 const runAction = () => {
+    const { eventData, requiredLabels, maximumMatchingLabelsCount } = resolveConfiguration()
+    const requiredLabelsList = Array.from(requiredLabels).join(", ")
+
+    if (!eventData.pull_request.labels || eventData.pull_request.labels.length === 0) {
+        throw new ActionError(`No labels defined on the pull request. Required labels: ${requiredLabelsList}.`)
+    }
+
+    const prLabels = eventData.pull_request.labels.map(label => label.name)
+
+    console.log(`Required labels (${escapeData(requiredLabelsList)})`)
+    console.log(`Pull request labels (${escapeData(prLabels.join(", "))})`)
+
+    const matchingLabels = prLabels.filter(label => requiredLabels.has(label))
+    console.log(`Found ${matchingLabels.length} matching label(s) on the pull request (${escapeData(matchingLabels.join(", "))})`)
+
+    if (matchingLabels.length === 0) {
+        throw new ActionError(`No matching required labels found. Required labels: ${requiredLabelsList}.`)
+    }
+
+    if (matchingLabels.length > maximumMatchingLabelsCount) {
+        throw new ActionError(`Found ${matchingLabels.length} matching label(s), but a maximum of ${maximumMatchingLabelsCount} is allowed.`)
+    }
+}
+
+const resolveConfiguration = () => {
     const eventPath = process.env.GITHUB_EVENT_PATH
 
     if (!eventPath || !fs.existsSync(eventPath)) {
@@ -17,6 +42,13 @@ const runAction = () => {
         throw new ActionError("This is not a pull request.")
     }
 
+    const requiredLabels = resolveRequiredLabels()
+    const maximumMatchingLabelsCount = resolveMaximumMatchingLabelsCount(requiredLabels.size)
+
+    return { eventData, requiredLabels, maximumMatchingLabelsCount }
+}
+
+const resolveRequiredLabels = () => {
     const inputLabels = process.env.INPUT_LABELS
 
     if (!inputLabels) {
@@ -34,27 +66,7 @@ const runAction = () => {
         console.log("::warning::The labels input contains duplicate labels.")
     }
 
-    const maximumMatchingLabels = resolveMaximumMatchingLabelsCount(requiredLabels.size)
-
-    if (!eventData.pull_request.labels || eventData.pull_request.labels.length === 0) {
-        throw new ActionError(`No labels defined on the pull request. Required labels: ${Array.from(requiredLabels).join(", ")}.`)
-    }
-
-    const prLabels = eventData.pull_request.labels.map(label => label.name)
-
-    console.log(`Required labels (${escapeData(Array.from(requiredLabels).join(", "))})`)
-    console.log(`Pull request labels (${escapeData(prLabels.join(", "))})`)
-
-    const matchingLabels = prLabels.filter(label => requiredLabels.has(label))
-    console.log(`Found ${matchingLabels.length} matching label(s) on the pull request (${escapeData(matchingLabels.join(", "))})`)
-
-    if (matchingLabels.length === 0) {
-        throw new ActionError(`No matching required labels found. Required labels: ${Array.from(requiredLabels).join(", ")}.`)
-    }
-
-    if (matchingLabels.length > maximumMatchingLabels) {
-        throw new ActionError(`Found ${matchingLabels.length} matching label(s), but a maximum of ${maximumMatchingLabels} is allowed.`)
-    }
+    return requiredLabels
 }
 
 const resolveMaximumMatchingLabelsCount = (defaultValue) => {
