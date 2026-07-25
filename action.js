@@ -138,8 +138,7 @@ const asCodeSpan = (label) => {
     return `${fence}${padding}${content}${padding}${fence}`
 }
 
-const ACTION_REPOSITORY = "ludeeus/action-require-labels"
-const DOCUMENTATION_LINK = `[${ACTION_REPOSITORY} documentation](https://github.com/${ACTION_REPOSITORY}#readme)`
+const DOCUMENTATION_LINK = "[ludeeus/action-require-labels documentation](https://github.com/ludeeus/action-require-labels#readme)"
 
 const buildSummary = ({ requiredLabels, prLabels, matchingLabels, maximumMatchingLabelsCount, failureMessage, minimal }) => {
     const labelCell = (labels) => labels.length === 0 ? "_(none)_" : labels.map(asCodeSpan).join(", ")
