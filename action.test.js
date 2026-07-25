@@ -420,9 +420,9 @@ test("\"always\" writes a passing summary with the three label groups", () => {
     const written = writes[0].data;
     assert.match(written, /## Required labels/);
     assert.match(written, /✅ \*\*Passed\*\* — 1 of 3 required labels present\./);
-    assert.match(written, /\| Required \| bugfix, breaking-change, new-feature \|/);
-    assert.match(written, /\| Present \| bugfix, question \|/);
-    assert.match(written, /\| Matched \| bugfix \|/);
+    assert.match(written, /\| Required \| `bugfix`, `breaking-change`, `new-feature` \|/);
+    assert.match(written, /\| Present \| `bugfix`, `question` \|/);
+    assert.match(written, /\| Matched \| `bugfix` \|/);
 });
 
 test("shows the cap in the passing summary only when it constrains", () => {
@@ -619,11 +619,27 @@ test("escapes markdown-breaking characters in label names within the summary", (
     main();
 
     const written = writes[0].data;
-    assert.match(written, /a\\\|b\\`c d/);
+    // The label contains a backtick, so the code-span fence widens to two rather
+    // than backslash-escaping it (a backslash is literal inside a code span).
+    assert.match(written, /``a\\\|b`c d``/);
     assert.ok(!written.includes("a|b"));
     for (const line of written.split("\n")) {
         assert.ok(!/[\r\n]/.test(line));
     }
+});
+
+test("pads the code span when a label starts or ends with a backtick", () => {
+    stubEvent({
+        event: { pull_request: { labels: [{ name: "`wip`" }] } },
+        inputLabels: "`wip`",
+        summary: "always",
+        stepSummaryPath: "/mock/summary.md",
+    });
+    const writes = captureSummary();
+
+    main();
+
+    assert.match(writes[0].data, /\| Required \| `` `wip` `` \|/);
 });
 
 test("links the full summary to the docs for the action ref in use", () => {

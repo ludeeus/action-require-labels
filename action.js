@@ -121,6 +121,18 @@ const escapeMarkdown = (text) => text
     .replace(/\|/g, "\\|")
     .replace(/\r?\n/g, " ")
 
+// Renders a label as a markdown code span. A backslash is literal inside a code
+// span, so a backtick in the label cannot be escaped — the fence is widened past
+// the longest backtick run instead. GFM still requires escaping the table's own
+// pipe delimiter, even within a code span.
+const asCodeSpan = (label) => {
+    const content = label.replace(/\|/g, "\\|").replace(/\r?\n/g, " ")
+    const backtickRuns = Array.from(content.matchAll(/`+/g), (match) => match[0].length)
+    const fence = "`".repeat(Math.max(0, ...backtickRuns) + 1)
+    const padding = content.startsWith("`") || content.endsWith("`") ? " " : ""
+    return `${fence}${padding}${content}${padding}${fence}`
+}
+
 // The action's own repository and ref (tag/branch/SHA) from `uses:`, so the
 // summary links to the documentation matching the version in use. Both are
 // unset for a local action (`uses: ./`), where no link is rendered.
@@ -134,7 +146,7 @@ const resolveDocumentationLink = () => {
 }
 
 const buildSummary = ({ requiredLabels, prLabels, matchingLabels, maximumMatchingLabelsCount, failureMessage, minimal, documentationLink }) => {
-    const labelCell = (labels) => labels.length === 0 ? "_(none)_" : labels.map(escapeMarkdown).join(", ")
+    const labelCell = (labels) => labels.length === 0 ? "_(none)_" : labels.map(asCodeSpan).join(", ")
     const capNote = maximumMatchingLabelsCount < requiredLabels.size ? ` (max ${maximumMatchingLabelsCount} allowed)` : ""
     const statusLine = failureMessage
         ? `❌ **Failed** — ${escapeMarkdown(failureMessage)}`
