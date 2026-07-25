@@ -114,13 +114,15 @@ const resolveSummaryMode = () => {
 
 const shouldWriteSummary = (mode, failed) => mode !== null && (!mode.errorOnly || failed)
 
+// CommonMark counts a lone carriage return as a line ending, not just CRLF and
+// LF, so every variant has to collapse or the value escapes its row.
+const collapseLineEndings = (text) => text.replace(/\r\n|[\r\n]/g, " ")
+
 // Keeps a label-derived value on a single line and rendering as literal text.
 // The value is only ever embedded mid-line, so characters that are markup solely
 // at the start of a line (`#`, `-`, `1.`) cannot take effect and are left alone;
 // everything that can open an inline construct is escaped.
-const escapeMarkdown = (text) => text
-    .replace(/[\\`*_[\]<>&~|]/g, "\\$&")
-    .replace(/\r?\n/g, " ")
+const escapeMarkdown = (text) => collapseLineEndings(text.replace(/[\\`*_[\]<>&~|]/g, "\\$&"))
 
 // Renders a label as a markdown code span. A backslash cannot escape a backtick
 // inside a code span, so the fence is widened past the longest backtick run
@@ -129,7 +131,7 @@ const escapeMarkdown = (text) => text
 // immediately before a pipe would consume that escape and leave the delimiter
 // bare, breaking the row.
 const asCodeSpan = (label) => {
-    const content = label.replace(/\\/g, "\\\\").replace(/\|/g, "\\|").replace(/\r?\n/g, " ")
+    const content = collapseLineEndings(label.replace(/\\/g, "\\\\").replace(/\|/g, "\\|"))
     const backtickRuns = Array.from(content.matchAll(/`+/g), (match) => match[0].length)
     const fence = "`".repeat(Math.max(0, ...backtickRuns) + 1)
     const padding = content.startsWith("`") || content.endsWith("`") ? " " : ""
@@ -137,19 +139,9 @@ const asCodeSpan = (label) => {
 }
 
 const ACTION_REPOSITORY = "ludeeus/action-require-labels"
+const DOCUMENTATION_LINK = `[${ACTION_REPOSITORY} documentation](https://github.com/${ACTION_REPOSITORY}#readme)`
 
-// GITHUB_ACTION_REF is the ref (tag/branch/SHA) this action was resolved from in
-// `uses:`, so the summary links to the documentation matching the version in
-// use. It is unset for a local action (`uses: ./`), where no link is rendered.
-const resolveDocumentationLink = () => {
-    const ref = process.env.GITHUB_ACTION_REF
-    if (!ref) {
-        return null
-    }
-    return `[${ACTION_REPOSITORY}@${ref} documentation](https://github.com/${ACTION_REPOSITORY}/blob/${ref}/README.md)`
-}
-
-const buildSummary = ({ requiredLabels, prLabels, matchingLabels, maximumMatchingLabelsCount, failureMessage, minimal, documentationLink }) => {
+const buildSummary = ({ requiredLabels, prLabels, matchingLabels, maximumMatchingLabelsCount, failureMessage, minimal }) => {
     const labelCell = (labels) => labels.length === 0 ? "_(none)_" : labels.map(asCodeSpan).join(", ")
     const capNote = maximumMatchingLabelsCount < requiredLabels.size ? ` (max ${maximumMatchingLabelsCount} allowed)` : ""
     const statusLine = failureMessage
@@ -163,7 +155,8 @@ const buildSummary = ({ requiredLabels, prLabels, matchingLabels, maximumMatchin
         `| Present | ${labelCell(prLabels)} |`,
         `| Matched | ${labelCell(matchingLabels)} |`,
         "",
-        ...(documentationLink ? [documentationLink, ""] : []),
+        DOCUMENTATION_LINK,
+        "",
     ]
 
     return ["## Required labels", "", statusLine, "", ...table].join("\n")
@@ -174,11 +167,7 @@ const writeSummary = (result) => {
     if (!summaryPath) {
         return
     }
-    fs.appendFileSync(summaryPath, buildSummary({
-        ...result,
-        minimal: result.summaryMode.minimal,
-        documentationLink: resolveDocumentationLink(),
-    }))
+    fs.appendFileSync(summaryPath, buildSummary({ ...result, minimal: result.summaryMode.minimal }))
 }
 
 const main = () => {

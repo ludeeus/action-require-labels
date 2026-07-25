@@ -24,7 +24,6 @@ function stubEvent(opts = {}) {
     const maximumMatchingLabels = "maximumMatchingLabels" in opts ? opts.maximumMatchingLabels : undefined;
     const summary = "summary" in opts ? opts.summary : undefined;
     const stepSummaryPath = "stepSummaryPath" in opts ? opts.stepSummaryPath : undefined;
-    const actionRef = "actionRef" in opts ? opts.actionRef : undefined;
 
     mock.method(fs, "existsSync", () => exists);
     mock.method(fs, "readFileSync", () => JSON.stringify(event));
@@ -58,12 +57,6 @@ function stubEvent(opts = {}) {
     } else {
         process.env.GITHUB_STEP_SUMMARY = stepSummaryPath;
     }
-
-    if (actionRef === undefined) {
-        delete process.env.GITHUB_ACTION_REF;
-    } else {
-        process.env.GITHUB_ACTION_REF = actionRef;
-    }
 }
 
 // Captures the summary file writes main() performs, so no test touches disk.
@@ -86,7 +79,6 @@ afterEach(() => {
     delete process.env.INPUT_MAXIMUM_MATCHING_LABELS;
     delete process.env.INPUT_SUMMARY;
     delete process.env.GITHUB_STEP_SUMMARY;
-    delete process.env.GITHUB_ACTION_REF;
     // main() sets process.exitCode on failure; restore it so a failing-run test
     // cannot make the test runner itself exit non-zero.
     process.exitCode = originalExitCode;
@@ -651,6 +643,44 @@ test("escapes markdown metacharacters in the failing status line", (t) => {
     t.assert.snapshot(writes[0].data);
 });
 
+for (const { label, lineEnding } of [
+    { label: "a carriage return and line feed", lineEnding: "\r\n" },
+    { label: "a bare line feed", lineEnding: "\n" },
+    { label: "a bare carriage return", lineEnding: "\r" },
+]) {
+    test(`collapses ${label} in a label so the row stays on one line`, () => {
+        stubEvent({
+            event: { pull_request: { labels: [{ name: `before${lineEnding}after` }] } },
+            inputLabels: `before${lineEnding}after`,
+            summary: "always",
+            stepSummaryPath: "/mock/summary.md",
+        });
+        const writes = captureSummary();
+
+        main();
+
+        const rows = writes[0].data.split("\n").filter(line => line.startsWith("| Required"));
+        assert.equal(rows.length, 1);
+        assert.match(rows[0], /before after/);
+    });
+
+    test(`collapses ${label} in the failing status line`, () => {
+        stubEvent({
+            event: { pull_request: { labels: [{ name: "question" }] } },
+            inputLabels: `before${lineEnding}after`,
+            summary: "always",
+            stepSummaryPath: "/mock/summary.md",
+        });
+        const writes = captureSummary();
+
+        main();
+
+        const statusLines = writes[0].data.split("\n").filter(line => line.startsWith("❌"));
+        assert.equal(statusLines.length, 1);
+        assert.match(statusLines[0], /before after/);
+    });
+}
+
 test("keeps a label with a backslash before a pipe inside a single cell", (t) => {
     stubEvent({
         event: { pull_request: { labels: [{ name: "a\\|b" }] } },
@@ -683,22 +713,7 @@ test("pads the code span when a label starts or ends with a backtick", (t) => {
     t.assert.snapshot(writes[0].data);
 });
 
-test("links the full summary to the docs for the action ref in use", (t) => {
-    stubEvent({
-        event: { pull_request: { labels: [{ name: "bugfix" }] } },
-        inputLabels: "bugfix,breaking-change",
-        summary: "always",
-        stepSummaryPath: "/mock/summary.md",
-        actionRef: "2.0.0",
-    });
-    const writes = captureSummary();
-
-    main();
-
-    t.assert.snapshot(writes[0].data);
-});
-
-test("omits the docs link when the action ref is unset", (t) => {
+test("links the full summary to the documentation", (t) => {
     stubEvent({
         event: { pull_request: { labels: [{ name: "bugfix" }] } },
         inputLabels: "bugfix,breaking-change",
@@ -709,17 +724,16 @@ test("omits the docs link when the action ref is unset", (t) => {
 
     main();
 
-    assert.doesNotMatch(writes[0].data, /documentation\]/);
+    assert.match(writes[0].data, /\[ludeeus\/action-require-labels documentation\]\(https:\/\/github\.com\/ludeeus\/action-require-labels#readme\)/);
     t.assert.snapshot(writes[0].data);
 });
 
-test("omits the docs link from the minimal summary even when the ref is set", (t) => {
+test("omits the docs link from the minimal summary", (t) => {
     stubEvent({
         event: { pull_request: { labels: [{ name: "bugfix" }] } },
         inputLabels: "bugfix,breaking-change",
         summary: "minimal",
         stepSummaryPath: "/mock/summary.md",
-        actionRef: "2.0.0",
     });
     const writes = captureSummary();
 
