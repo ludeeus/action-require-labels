@@ -1,8 +1,13 @@
-const { test, mock, afterEach } = require("node:test");
+const { test, mock, afterEach, snapshot } = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 
 const { runAction, main, ActionError } = require("./action.js");
+
+// Store the generated markdown verbatim, so action.test.js.snapshot reads as the
+// rendered summaries a run would produce. Regenerate with:
+//     node --test --test-update-snapshots
+snapshot.setDefaultSnapshotSerializers([(value) => value]);
 
 const originalExitCode = process.exitCode;
 
@@ -404,7 +409,7 @@ test("does not write a summary when \"always\" but GITHUB_STEP_SUMMARY is unset"
     assert.equal(writes.length, 0);
 });
 
-test("\"always\" writes a passing summary with the three label groups", () => {
+test("\"always\" writes a passing summary with the three label groups", (t) => {
     stubEvent({
         event: { pull_request: { labels: [{ name: "bugfix" }, { name: "question" }] } },
         inputLabels: "bugfix,breaking-change,new-feature",
@@ -417,15 +422,10 @@ test("\"always\" writes a passing summary with the three label groups", () => {
 
     assert.equal(writes.length, 1);
     assert.equal(writes[0].path, "/mock/summary.md");
-    const written = writes[0].data;
-    assert.match(written, /## Required labels/);
-    assert.match(written, /✅ \*\*Passed\*\* — 1 of 3 required labels present\./);
-    assert.match(written, /\| Required \| `bugfix`, `breaking-change`, `new-feature` \|/);
-    assert.match(written, /\| Present \| `bugfix`, `question` \|/);
-    assert.match(written, /\| Matched \| `bugfix` \|/);
+    t.assert.snapshot(writes[0].data);
 });
 
-test("shows the cap in the passing summary only when it constrains", () => {
+test("shows the cap in the passing summary only when it constrains", (t) => {
     stubEvent({
         event: { pull_request: { labels: [{ name: "p1" }] } },
         inputLabels: "p1,p2,p3",
@@ -437,10 +437,10 @@ test("shows the cap in the passing summary only when it constrains", () => {
 
     main();
 
-    assert.match(writes[0].data, /✅ \*\*Passed\*\* — 1 of 3 required labels present \(max 1 allowed\)\./);
+    t.assert.snapshot(writes[0].data);
 });
 
-test("omits the cap from the passing summary when it uses the default", () => {
+test("omits the cap from the passing summary when it uses the default", (t) => {
     stubEvent({
         event: { pull_request: { labels: [{ name: "bugfix" }] } },
         inputLabels: "bugfix,breaking-change,new-feature",
@@ -452,9 +452,10 @@ test("omits the cap from the passing summary when it uses the default", () => {
     main();
 
     assert.doesNotMatch(writes[0].data, /\(max \d+ allowed\)/);
+    t.assert.snapshot(writes[0].data);
 });
 
-test("\"always\" writes a failing summary and still exits non-zero", () => {
+test("\"always\" writes a failing summary and still exits non-zero", (t) => {
     stubEvent({
         event: { pull_request: { labels: [{ name: "documentation" }] } },
         inputLabels: "bugfix,breaking-change",
@@ -467,12 +468,10 @@ test("\"always\" writes a failing summary and still exits non-zero", () => {
 
     assert.equal(process.exitCode, 1);
     assert.equal(writes.length, 1);
-    const written = writes[0].data;
-    assert.match(written, /❌ \*\*Failed\*\* — No matching required labels found\./);
-    assert.match(written, /\| Matched \| _\(none\)_ \|/);
+    t.assert.snapshot(writes[0].data);
 });
 
-test("\"always\" writes an empty Present group when the pull request has no labels", () => {
+test("\"always\" writes an empty Present group when the pull request has no labels", (t) => {
     stubEvent({
         event: { pull_request: { labels: [] } },
         inputLabels: "bugfix,breaking-change",
@@ -484,10 +483,10 @@ test("\"always\" writes an empty Present group when the pull request has no labe
     main();
 
     assert.equal(process.exitCode, 1);
-    assert.match(writes[0].data, /\| Present \| _\(none\)_ \|/);
+    t.assert.snapshot(writes[0].data);
 });
 
-test("\"always\" writes the summary for the maximum_matching_labels failure", () => {
+test("\"always\" writes the summary for the maximum_matching_labels failure", (t) => {
     stubEvent({
         event: { pull_request: { labels: [{ name: "bugfix" }, { name: "new-feature" }] } },
         inputLabels: "bugfix,breaking-change,new-feature",
@@ -500,7 +499,7 @@ test("\"always\" writes the summary for the maximum_matching_labels failure", ()
     main();
 
     assert.equal(process.exitCode, 1);
-    assert.match(writes[0].data, /❌ \*\*Failed\*\* — Found 2 matching label\(s\), but a maximum of 1 is allowed\./);
+    t.assert.snapshot(writes[0].data);
 });
 
 test("does not write a summary when an invalid configuration prevents the check", () => {
@@ -527,7 +526,7 @@ test("\"error\" does not write a summary on a passing run", () => {
     assert.equal(writes.length, 0);
 });
 
-test("\"error\" writes the full table on a failing run", () => {
+test("\"error\" writes the full table on a failing run", (t) => {
     stubEvent({
         event: { pull_request: { labels: [{ name: "documentation" }] } },
         inputLabels: "bugfix,breaking-change",
@@ -539,11 +538,10 @@ test("\"error\" writes the full table on a failing run", () => {
     main();
 
     assert.equal(writes.length, 1);
-    assert.match(writes[0].data, /❌ \*\*Failed\*\*/);
-    assert.match(writes[0].data, /\| Matched \| _\(none\)_ \|/);
+    t.assert.snapshot(writes[0].data);
 });
 
-test("\"minimal\" writes only the status line on a passing run", () => {
+test("\"minimal\" writes only the status line on a passing run", (t) => {
     stubEvent({
         event: { pull_request: { labels: [{ name: "bugfix" }] } },
         inputLabels: "bugfix,breaking-change,new-feature",
@@ -555,13 +553,11 @@ test("\"minimal\" writes only the status line on a passing run", () => {
     main();
 
     assert.equal(writes.length, 1);
-    const written = writes[0].data;
-    assert.match(written, /## Required labels/);
-    assert.match(written, /✅ \*\*Passed\*\* — 1 of 3 required labels present\./);
-    assert.doesNotMatch(written, /\| Group \| Labels \|/);
+    assert.doesNotMatch(writes[0].data, /\| Group \| Labels \|/);
+    t.assert.snapshot(writes[0].data);
 });
 
-test("\"minimal\" writes the status line on a failing run", () => {
+test("\"minimal\" writes the status line on a failing run", (t) => {
     stubEvent({
         event: { pull_request: { labels: [{ name: "documentation" }] } },
         inputLabels: "bugfix,breaking-change",
@@ -573,8 +569,8 @@ test("\"minimal\" writes the status line on a failing run", () => {
     main();
 
     assert.equal(writes.length, 1);
-    assert.match(writes[0].data, /❌ \*\*Failed\*\*/);
     assert.doesNotMatch(writes[0].data, /\| Group \| Labels \|/);
+    t.assert.snapshot(writes[0].data);
 });
 
 test("\"minimal_error\" does not write a summary on a passing run", () => {
@@ -591,7 +587,7 @@ test("\"minimal_error\" does not write a summary on a passing run", () => {
     assert.equal(writes.length, 0);
 });
 
-test("\"minimal_error\" writes only the status line on a failing run", () => {
+test("\"minimal_error\" writes only the status line on a failing run", (t) => {
     stubEvent({
         event: { pull_request: { labels: [{ name: "documentation" }] } },
         inputLabels: "bugfix,breaking-change",
@@ -603,11 +599,11 @@ test("\"minimal_error\" writes only the status line on a failing run", () => {
     main();
 
     assert.equal(writes.length, 1);
-    assert.match(writes[0].data, /❌ \*\*Failed\*\*/);
     assert.doesNotMatch(writes[0].data, /\| Group \| Labels \|/);
+    t.assert.snapshot(writes[0].data);
 });
 
-test("escapes markdown-breaking characters in label names within the summary", () => {
+test("escapes markdown-breaking characters in label names within the summary", (t) => {
     stubEvent({
         event: { pull_request: { labels: [{ name: "a|b`c\r\nd" }] } },
         inputLabels: "a|b`c\r\nd",
@@ -619,16 +615,16 @@ test("escapes markdown-breaking characters in label names within the summary", (
     main();
 
     const written = writes[0].data;
-    // The label contains a backtick, so the code-span fence widens to two rather
-    // than backslash-escaping it (a backslash is literal inside a code span).
-    assert.match(written, /``a\\\|b`c d``/);
+    // Invariants the snapshot must never be regenerated away from: no raw pipe
+    // can reach a cell, and no row may break across lines.
     assert.ok(!written.includes("a|b"));
     for (const line of written.split("\n")) {
         assert.ok(!/[\r\n]/.test(line));
     }
+    t.assert.snapshot(written);
 });
 
-test("pads the code span when a label starts or ends with a backtick", () => {
+test("pads the code span when a label starts or ends with a backtick", (t) => {
     stubEvent({
         event: { pull_request: { labels: [{ name: "`wip`" }] } },
         inputLabels: "`wip`",
@@ -639,10 +635,10 @@ test("pads the code span when a label starts or ends with a backtick", () => {
 
     main();
 
-    assert.match(writes[0].data, /\| Required \| `` `wip` `` \|/);
+    t.assert.snapshot(writes[0].data);
 });
 
-test("links the full summary to the docs for the action ref in use", () => {
+test("links the full summary to the docs for the action ref in use", (t) => {
     stubEvent({
         event: { pull_request: { labels: [{ name: "bugfix" }] } },
         inputLabels: "bugfix,breaking-change",
@@ -655,10 +651,10 @@ test("links the full summary to the docs for the action ref in use", () => {
 
     main();
 
-    assert.match(writes[0].data, /\[ludeeus\/action-require-labels@2\.0\.0 documentation\]\(https:\/\/github\.com\/ludeeus\/action-require-labels\/blob\/2\.0\.0\/README\.md\)/);
+    t.assert.snapshot(writes[0].data);
 });
 
-test("omits the docs link when the action repository and ref are unset", () => {
+test("omits the docs link when the action repository and ref are unset", (t) => {
     stubEvent({
         event: { pull_request: { labels: [{ name: "bugfix" }] } },
         inputLabels: "bugfix,breaking-change",
@@ -670,9 +666,10 @@ test("omits the docs link when the action repository and ref are unset", () => {
     main();
 
     assert.doesNotMatch(writes[0].data, /documentation\]/);
+    t.assert.snapshot(writes[0].data);
 });
 
-test("omits the docs link from the minimal summary even when the ref is set", () => {
+test("omits the docs link from the minimal summary even when the ref is set", (t) => {
     stubEvent({
         event: { pull_request: { labels: [{ name: "bugfix" }] } },
         inputLabels: "bugfix,breaking-change",
@@ -686,4 +683,5 @@ test("omits the docs link from the minimal summary even when the ref is set", ()
     main();
 
     assert.doesNotMatch(writes[0].data, /documentation\]/);
+    t.assert.snapshot(writes[0].data);
 });

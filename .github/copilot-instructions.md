@@ -9,6 +9,7 @@ no GitHub API calls, no token — so it runs under `permissions: {}`.
 - `action.yml` — action manifest (`runs.using: node24`, `main: action.js`)
 - `action.js` — the entire implementation (CommonJS, exports `runAction` and `main`)
 - `action.test.js` — unit tests using the built-in `node:test` runner
+- `action.test.js.snapshot` — committed snapshots of the generated step summaries
 - `.github/workflows/unittest.yaml` — runs `node --test` on PRs/pushes to `main`
 - `.github/workflows/test.yaml` — integration self-test that runs the local
   action (`uses: ./`) against this repo's own PR labels
@@ -82,6 +83,18 @@ This is exactly what CI runs. Tests mock `node:fs` and set env vars via the
 `stubEvent()` helper in `action.test.js`; mocks and env are restored in
 `afterEach`. New behavior in `action.js` needs matching coverage in
 `action.test.js`, including failure branches.
+
+The generated step summaries are covered by snapshots in
+`action.test.js.snapshot`, stored verbatim so the file reads as the rendered
+markdown. It is committed and CI verifies against it. After an intentional change
+to the summary output, regenerate it and read the diff before committing:
+
+    node --test --test-update-snapshots
+
+Never regenerate to make a red test pass without checking the diff — a few
+summary tests keep explicit assertions next to the snapshot (no raw `|` in a
+cell, no row broken across lines) precisely so an escaping regression cannot be
+absorbed by a blind refresh.
 
 ## Workflow / CI conventions
 
