@@ -26,8 +26,8 @@ jobs:
       fail-fast: false
       matrix:
         os: &os_matrix
-          - ubuntu-24.04
-          - ubuntu-24.04-arm
+          - ubuntu-26.04
+          - ubuntu-26.04-arm
           - ubuntu-26.04
           - ubuntu-26.04-arm
           - ubuntu-slim
